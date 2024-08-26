@@ -2,14 +2,14 @@ import * as React from 'react';
 import { expect } from 'chai';
 import PropTypes from 'prop-types';
 import { SheetsRegistry } from 'jss';
-import { createClientRender, screen } from 'test/utils';
+import { createRenderer, screen } from '@mui/internal-test-utils';
 import { createGenerateClassName } from '@mui/styles';
 import styled from './styled';
 import StylesProvider from '../StylesProvider';
 
 describe('styled', () => {
   // StrictModeViolation: uses makeStyles
-  const render = createClientRender({ strict: false });
+  const { render } = createRenderer({ strict: false });
   let StyledButton;
 
   before(() => {
@@ -63,6 +63,8 @@ describe('styled', () => {
   });
 
   it('should filter some props', () => {
+    // false positive
+    // eslint-disable-next-line react/function-component-definition
     const style = (props) => ({
       background: props.color,
       borderRadius: 3,

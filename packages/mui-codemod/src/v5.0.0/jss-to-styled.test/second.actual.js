@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import Typography from '@material-ui/core/Typography';
 import makeStyles from '@material-ui/styles/makeStyles';
 import Container from 'modules/components/Container';
@@ -57,7 +57,7 @@ function AffiliatesHero() {
           <Button
             variant="contained"
             component={MuiLink}
-            href="mailto:store@material-ui.com"
+            href="mailto:store@mui.com"
             className={classes.apply}
           >
             Apply now

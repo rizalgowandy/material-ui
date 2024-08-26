@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { createClientRender, describeConformance } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import Typography from '@mui/material/Typography';
 import Timeline from '@mui/lab/Timeline';
 import TimelineItem from '@mui/lab/TimelineItem';
 import TimelineContent, { timelineContentClasses as classes } from '@mui/lab/TimelineContent';
+import describeConformance from '../../test/describeConformance';
 
 describe('<TimelineContent />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<TimelineContent />, () => ({
     classes,

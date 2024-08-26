@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { createClientRender, describeConformance } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import Step, { stepClasses as classes } from '@mui/material/Step';
 import Stepper from '@mui/material/Stepper';
 import StepLabel, { stepLabelClasses } from '@mui/material/StepLabel';
 import StepButton, { stepButtonClasses } from '@mui/material/StepButton';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Step />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<Step />, () => ({
     classes,
@@ -16,7 +17,7 @@ describe('<Step />', () => {
     muiName: 'MuiStep',
     testVariantProps: { variant: 'foo' },
     refInstanceof: window.HTMLDivElement,
-    skip: ['componentProp', 'componentsProp'],
+    skip: ['componentsProp'],
   }));
 
   it('merges styles and other props into the root node', () => {

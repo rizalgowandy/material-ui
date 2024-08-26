@@ -7,4 +7,4 @@ It's designed for developers who would like to use `styled-components` as the ma
 
 <!-- #default-branch-switch -->
 
-[The documentation](https://material-ui.com/guides/styled-engine/)
+Visit [https://next.mui.com/material-ui/integrations/styled-components/](https://next.mui.com/material-ui/integrations/styled-components/) to view the full documentation.

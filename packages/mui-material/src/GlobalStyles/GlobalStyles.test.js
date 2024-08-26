@@ -1,15 +1,15 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { createClientRender } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import GlobalStyles from '@mui/material/GlobalStyles';
-import { ThemeProvider, createTheme } from '@mui/material//styles/';
+import { ThemeProvider, createTheme } from '@mui/material/styles/';
 
 const customTheme = createTheme({
   spacing: 10,
 });
 
 describe('Global', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   it('should provide default theme', function test() {
     if (/jsdom/.test(window.navigator.userAgent)) {

@@ -1,15 +1,16 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { spy, stub, useFakeTimers } from 'sinon';
-import { act, createClientRender, describeConformance } from 'test/utils';
-import { createTheme } from '@mui/material/styles';
+import { spy, stub } from 'sinon';
+import { act, createRenderer } from '@mui/internal-test-utils';
 import { Transition } from 'react-transition-group';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Slide from '@mui/material/Slide';
 import { setTranslateValue } from './Slide';
 import { useForkRef } from '../utils';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Slide />', () => {
-  const render = createClientRender();
+  const { clock, render } = createRenderer();
 
   const defaultProps = {
     in: true,
@@ -22,6 +23,7 @@ describe('<Slide />', () => {
       <div />
     </Slide>,
     () => ({
+      render,
       classes: {},
       inheritComponent: Transition,
       refInstanceof: window.HTMLDivElement,
@@ -31,8 +33,6 @@ describe('<Slide />', () => {
         'themeDefaultProps',
         'themeStyleOverrides',
         'themeVariants',
-        // react-transition-group issue
-        'reactTestRenderer',
       ],
     }),
   );
@@ -56,17 +56,10 @@ describe('<Slide />', () => {
   });
 
   describe('transition lifecycle', () => {
-    let clock;
-
-    beforeEach(() => {
-      clock = useFakeTimers();
-    });
-
-    afterEach(() => {
-      clock.restore();
-    });
+    clock.withFakeTimers();
 
     it('tests', () => {
+      const handleAddEndListener = spy();
       const handleEnter = spy();
       const handleEntering = spy();
       const handleEntered = spy();
@@ -77,6 +70,7 @@ describe('<Slide />', () => {
       let child;
       const { setProps } = render(
         <Slide
+          addEndListener={handleAddEndListener}
           onEnter={handleEnter}
           onEntering={handleEntering}
           onEntered={handleEntered}
@@ -94,6 +88,10 @@ describe('<Slide />', () => {
 
       setProps({ in: true });
 
+      expect(handleAddEndListener.callCount).to.equal(1);
+      expect(handleAddEndListener.args[0][0]).to.equal(child);
+      expect(typeof handleAddEndListener.args[0][1]).to.equal('function');
+
       expect(handleEntering.callCount).to.equal(1);
       expect(handleEntering.args[0][0]).to.equal(child);
 
@@ -102,9 +100,7 @@ describe('<Slide />', () => {
       expect(handleEntering.callCount).to.equal(1);
       expect(handleEntering.args[0][0]).to.equal(child);
 
-      act(() => {
-        clock.tick(1000);
-      });
+      clock.tick(1000);
       expect(handleEntered.callCount).to.equal(1);
 
       setProps({ in: false });
@@ -115,9 +111,7 @@ describe('<Slide />', () => {
       expect(handleExiting.callCount).to.equal(1);
       expect(handleExiting.args[0][0]).to.equal(child);
 
-      act(() => {
-        clock.tick(1000);
-      });
+      clock.tick(1000);
       expect(handleExited.callCount).to.equal(1);
       expect(handleExited.args[0][0]).to.equal(child);
     });
@@ -160,6 +154,49 @@ describe('<Slide />', () => {
         /transform 446ms cubic-bezier\(0.4, 0, 0.6, 1\)( 0ms)?/,
       );
     });
+
+    it('should render the default theme values by default', function test() {
+      if (/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+      const theme = createTheme();
+      const enteringScreenDurationInSeconds = theme.transitions.duration.enteringScreen / 1000;
+
+      const { getByTestId } = render(
+        <Slide in appear>
+          <div data-testid="child">Foo</div>
+        </Slide>,
+      );
+
+      const child = getByTestId('child');
+      expect(child).toHaveComputedStyle({
+        transitionDuration: `${enteringScreenDurationInSeconds}s`,
+      });
+    });
+
+    it('should render the custom theme values', function test() {
+      if (/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+      const theme = createTheme({
+        transitions: {
+          duration: {
+            enteringScreen: 1,
+          },
+        },
+      });
+
+      const { getByTestId } = render(
+        <ThemeProvider theme={theme}>
+          <Slide in appear>
+            <div data-testid="child">Foo</div>
+          </Slide>
+        </ThemeProvider>,
+      );
+
+      const child = getByTestId('child');
+      expect(child).toHaveComputedStyle({ transitionDuration: '0.001s' });
+    });
   });
 
   describe('prop: easing', () => {
@@ -197,6 +234,43 @@ describe('<Slide />', () => {
 
       expect(handleExit.args[0][0].style.transition).to.match(
         /transform 195ms cubic-bezier\(0, 0, 1, 1\)( 0ms)?/,
+      );
+    });
+
+    it('should render the default theme values by default', function test() {
+      if (!/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+      const theme = createTheme();
+      const handleEntering = spy();
+      render(<Slide {...defaultProps} onEntering={handleEntering} />);
+
+      expect(handleEntering.args[0][0].style.transition).to.equal(
+        `transform 225ms ${theme.transitions.easing.easeOut} 0ms`,
+      );
+    });
+
+    it('should render the custom theme values', function test() {
+      if (!/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+      const theme = createTheme({
+        transitions: {
+          easing: {
+            easeOut: 'cubic-bezier(1, 1, 1, 1)',
+          },
+        },
+      });
+
+      const handleEntering = spy();
+      render(
+        <ThemeProvider theme={theme}>
+          <Slide {...defaultProps} onEntering={handleEntering} />
+        </ThemeProvider>,
+      );
+
+      expect(handleEntering.args[0][0].style.transition).to.equal(
+        `transform 225ms ${theme.transitions.easing.easeOut} 0ms`,
       );
     });
   });
@@ -506,15 +580,7 @@ describe('<Slide />', () => {
     });
 
     describe('resize', () => {
-      let clock;
-
-      beforeEach(() => {
-        clock = useFakeTimers();
-      });
-
-      afterEach(() => {
-        clock.restore();
-      });
+      clock.withFakeTimers();
 
       it('should recompute the correct position', () => {
         const { container } = render(
@@ -525,8 +591,8 @@ describe('<Slide />', () => {
 
         act(() => {
           window.dispatchEvent(new window.Event('resize', {}));
-          clock.tick(166);
         });
+        clock.tick(166);
 
         const child = container.querySelector('#testChild');
         expect(child.style.transform).not.to.equal(undefined);
@@ -553,8 +619,8 @@ describe('<Slide />', () => {
         render(<Slide {...defaultProps} />);
         act(() => {
           window.dispatchEvent(new window.Event('resize', {}));
-          clock.tick(166);
         });
+        clock.tick(166);
       });
     });
   });

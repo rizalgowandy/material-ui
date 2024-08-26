@@ -24,6 +24,7 @@ describe('@mui/codemod', () => {
         const expected = read('./jss-to-styled.test/Anonymous.expected.js');
         expect(actual).to.equal(expected, 'The transformed version should be correct');
       });
+
       describe('first', () => {
         it('transforms as needed', () => {
           const actual = transform(
@@ -501,6 +502,96 @@ describe('@mui/codemod', () => {
         );
 
         const expected = read('./jss-to-styled.test/twelfth.actual.js');
+        expect(actual).to.equal(expected, 'The transformed version should be correct');
+      });
+    });
+
+    describe('bugs - #28317 export function declaration', () => {
+      it('transforms as needed', () => {
+        const actual = transform(
+          {
+            source: read('./jss-to-styled.test/exportFunction.actual.js'),
+            path: require.resolve('./jss-to-styled.test/exportFunction.actual.js'),
+          },
+          { jscodeshift },
+          {},
+        );
+
+        const expected = read('./jss-to-styled.test/exportFunction.expected.js');
+        expect(actual).to.equal(expected, 'The transformed version should be correct');
+      });
+
+      it('should be idempotent', () => {
+        const actual = transform(
+          {
+            source: read('./jss-to-styled.test/exportFunction.expected.js'),
+            path: require.resolve('./jss-to-styled.test/exportFunction.expected.js'),
+          },
+          { jscodeshift },
+          {},
+        );
+
+        const expected = read('./jss-to-styled.test/exportFunction.expected.js');
+        expect(actual).to.equal(expected, 'The transformed version should be correct');
+      });
+    });
+
+    describe('bugs - #28317 export class declaration', () => {
+      it('transforms as needed', () => {
+        const actual = transform(
+          {
+            source: read('./jss-to-styled.test/exportClass.actual.js'),
+            path: require.resolve('./jss-to-styled.test/exportClass.actual.js'),
+          },
+          { jscodeshift },
+          {},
+        );
+
+        const expected = read('./jss-to-styled.test/exportClass.expected.js');
+        expect(actual).to.equal(expected, 'The transformed version should be correct');
+      });
+
+      it('should be idempotent', () => {
+        const actual = transform(
+          {
+            source: read('./jss-to-styled.test/exportClass.expected.js'),
+            path: require.resolve('./jss-to-styled.test/exportClass.expected.js'),
+          },
+          { jscodeshift },
+          {},
+        );
+
+        const expected = read('./jss-to-styled.test/exportClass.expected.js');
+        expect(actual).to.equal(expected, 'The transformed version should be correct');
+      });
+    });
+
+    describe('bugs - #29363 multiple makeStyles with the same classKeys', () => {
+      it('transforms as needed', () => {
+        const actual = transform(
+          {
+            source: read('./jss-to-styled.test/multipleWithStyles.actual.js'),
+            path: require.resolve('./jss-to-styled.test/multipleWithStyles.actual.js'),
+          },
+          { jscodeshift },
+          {},
+        );
+
+        const expected = read('./jss-to-styled.test/multipleWithStyles.expected.js');
+        expect(actual).to.equal(expected, 'The transformed version should be correct');
+      });
+
+      it('should be idempotent', () => {
+        const actual = transform(
+          {
+            source: read('./jss-to-styled.test/multipleWithStyles.expected.js'),
+            path: require.resolve('./jss-to-styled.test/multipleWithStyles.expected.js'),
+          },
+          { jscodeshift },
+          {},
+        );
+
+        const expected = read('./jss-to-styled.test/multipleWithStyles.expected.js');
         expect(actual).to.equal(expected, 'The transformed version should be correct');
       });
     });

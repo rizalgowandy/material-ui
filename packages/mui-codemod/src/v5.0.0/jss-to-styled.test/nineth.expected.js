@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react';
-import { styled } from '@material-ui/core/styles';
+import { styled } from '@mui/material/styles';
 const PREFIX = 'nineth';
 
 const classes = {
@@ -29,9 +29,9 @@ export default function Page() {
 
 
   return (
-    <Root>
+    (<Root>
       <h1 className={classes.header}></h1>
       <img className={classes.img}></img>
-    </Root>
+    </Root>)
   );
 }

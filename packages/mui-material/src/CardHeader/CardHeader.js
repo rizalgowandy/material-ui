@@ -1,10 +1,11 @@
+'use client';
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
-import { unstable_composeClasses as composeClasses } from '@mui/core';
-import Typography from '../Typography';
-import useThemeProps from '../styles/useThemeProps';
-import styled from '../styles/styled';
+import composeClasses from '@mui/utils/composeClasses';
+import Typography, { typographyClasses } from '../Typography';
+import { styled } from '../zero-styled';
+import { useDefaultProps } from '../DefaultPropsProvider';
 import cardHeaderClasses, { getCardHeaderUtilityClass } from './cardHeaderClasses';
 
 const useUtilityClasses = (ownerState) => {
@@ -64,10 +65,16 @@ const CardHeaderContent = styled('div', {
   overridesResolver: (props, styles) => styles.content,
 })({
   flex: '1 1 auto',
+  [`.${typographyClasses.root}:where(& .${cardHeaderClasses.title})`]: {
+    display: 'block',
+  },
+  [`.${typographyClasses.root}:where(& .${cardHeaderClasses.subheader})`]: {
+    display: 'block',
+  },
 });
 
 const CardHeader = React.forwardRef(function CardHeader(inProps, ref) {
-  const props = useThemeProps({ props: inProps, name: 'MuiCardHeader' });
+  const props = useDefaultProps({ props: inProps, name: 'MuiCardHeader' });
   const {
     action,
     avatar,
@@ -96,7 +103,6 @@ const CardHeader = React.forwardRef(function CardHeader(inProps, ref) {
         variant={avatar ? 'body2' : 'h5'}
         className={classes.title}
         component="span"
-        display="block"
         {...titleTypographyProps}
       >
         {title}
@@ -110,9 +116,8 @@ const CardHeader = React.forwardRef(function CardHeader(inProps, ref) {
       <Typography
         variant={avatar ? 'body2' : 'body1'}
         className={classes.subheader}
-        color="text.secondary"
+        color="textSecondary"
         component="span"
-        display="block"
         {...subheaderTypographyProps}
       >
         {subheader}
@@ -148,10 +153,10 @@ const CardHeader = React.forwardRef(function CardHeader(inProps, ref) {
 });
 
 CardHeader.propTypes /* remove-proptypes */ = {
-  // ----------------------------- Warning --------------------------------
-  // | These PropTypes are generated from the TypeScript type definitions |
-  // |     To update them edit the d.ts file and run "yarn proptypes"     |
-  // ----------------------------------------------------------------------
+  // ┌────────────────────────────── Warning ──────────────────────────────┐
+  // │ These PropTypes are generated from the TypeScript type definitions. │
+  // │    To update them, edit the d.ts file and run `pnpm proptypes`.     │
+  // └─────────────────────────────────────────────────────────────────────┘
   /**
    * The action to display in the card header.
    */
@@ -176,7 +181,7 @@ CardHeader.propTypes /* remove-proptypes */ = {
    * The component used for the root node.
    * Either a string to use a HTML element or a component.
    */
-  component: PropTypes /* @typescript-to-proptypes-ignore */.elementType,
+  component: PropTypes.elementType,
   /**
    * If `true`, `subheader` and `title` won't be wrapped by a Typography component.
    * This can be useful to render an alternative Typography variant by wrapping
@@ -197,7 +202,11 @@ CardHeader.propTypes /* remove-proptypes */ = {
   /**
    * The system prop that allows defining system overrides as well as additional CSS styles.
    */
-  sx: PropTypes.object,
+  sx: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.func, PropTypes.object, PropTypes.bool])),
+    PropTypes.func,
+    PropTypes.object,
+  ]),
   /**
    * The content of the component.
    */

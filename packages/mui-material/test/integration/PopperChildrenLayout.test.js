@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { expect } from 'chai';
 import { spy } from 'sinon';
-import { createClientRender } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import Collapse from '@mui/material/Collapse';
 import Fade from '@mui/material/Fade';
 import Grow from '@mui/material/Grow';
@@ -11,7 +11,7 @@ import Popper from '@mui/material/Popper';
 
 describe('<Popper />', () => {
   let isSafari;
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   before(function beforeHook() {
     // JSDOM has neither layout nor window.scrollTo
@@ -24,10 +24,12 @@ describe('<Popper />', () => {
 
   let originalScrollX;
   let originalScrollY;
+
   beforeEach(() => {
     originalScrollX = window.screenX;
     originalScrollY = window.scrollY;
   });
+
   afterEach(() => {
     window.scrollTo(originalScrollX, originalScrollY);
   });

@@ -1,19 +1,19 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { spy, useFakeTimers } from 'sinon';
-import MenuList from '@mui/material/MenuList';
-import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
+import { spy } from 'sinon';
 import {
   act,
-  createClientRender,
+  createRenderer,
   fireEvent,
   screen,
   programmaticFocusTriggersFocusVisible,
-} from 'test/utils';
+} from '@mui/internal-test-utils';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 
 describe('<MenuList> integration', () => {
-  const render = createClientRender();
+  const { clock, render } = createRenderer();
 
   specify('the MenuItems have the `menuitem` role', () => {
     const { getAllByRole } = render(
@@ -485,20 +485,16 @@ describe('<MenuList> integration', () => {
       expect(getByText('Arcansas')).toHaveFocus();
     });
 
-    it('should not get focusVisible class on click', () => {
-      const { getByText } = render(
+    it('should not get focusVisible class on click', async () => {
+      const { user, getByText } = render(
         <MenuList>
           <MenuItem focusVisibleClassName="focus-visible">Arizona</MenuItem>
         </MenuList>,
       );
 
       const menuitem = getByText('Arizona');
-      // user click
-      act(() => {
-        fireEvent.mouseDown(menuitem);
-        menuitem.focus();
-      });
-      fireEvent.click(menuitem);
+
+      await user.click(menuitem);
 
       expect(menuitem).toHaveFocus();
       if (programmaticFocusTriggersFocusVisible()) {
@@ -538,7 +534,7 @@ describe('<MenuList> integration', () => {
       expect(getByText('Arizona')).toHaveFocus();
     });
 
-    it('should not move focus if focus starts on descendant and the key doesnt match', () => {
+    it("should not move focus if focus starts on descendant and the key doesn't match", () => {
       const { getByText } = render(
         <MenuList>
           <MenuItem>Arizona</MenuItem>
@@ -573,16 +569,7 @@ describe('<MenuList> integration', () => {
     });
 
     describe('time', () => {
-      let clock;
-      beforeEach(() => {
-        clock = useFakeTimers();
-      });
-
-      afterEach(() => {
-        act(() => {
-          clock.restore();
-        });
-      });
+      clock.withFakeTimers();
 
       it('should reset the character buffer after 500ms', () => {
         render(

@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { createClientRender, describeConformance } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import TimelineItem, { timelineItemClasses as classes } from '@mui/lab/TimelineItem';
+import describeConformance from '../../test/describeConformance';
 
 describe('<TimelineItem />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<TimelineItem />, () => ({
     classes,

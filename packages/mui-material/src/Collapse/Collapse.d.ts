@@ -54,19 +54,19 @@ export interface CollapseProps extends StandardProps<TransitionProps, 'timeout'>
 
 /**
  * The Collapse transition is used by the
- * [Vertical Stepper](https://material-ui.com/components/steppers/#vertical-stepper) StepContent component.
+ * [Vertical Stepper](https://next.mui.com/material-ui/react-stepper/#vertical-stepper) StepContent component.
  * It uses [react-transition-group](https://github.com/reactjs/react-transition-group) internally.
  *
  * Demos:
  *
- * - [Cards](https://material-ui.com/components/cards/)
- * - [Lists](https://material-ui.com/components/lists/)
- * - [Transitions](https://material-ui.com/components/transitions/)
+ * - [Card](https://next.mui.com/material-ui/react-card/)
+ * - [Lists](https://next.mui.com/material-ui/react-list/)
+ * - [Transitions](https://next.mui.com/material-ui/transitions/)
  *
  * API:
  *
- * - [Collapse API](https://material-ui.com/api/collapse/)
- * - inherits [Transition API](https://reactcommunity.org/react-transition-group/transition#Transition-props)
+ * - [Collapse API](https://next.mui.com/material-ui/api/collapse/)
+ * - inherits [Transition API](https://reactcommunity.org/react-transition-group/transition/#Transition-props)
  */
 
-export default function Collapse(props: CollapseProps): JSX.Element;
+export default function Collapse(props: CollapseProps): React.JSX.Element;

@@ -1,24 +1,14 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { useFakeTimers, spy } from 'sinon';
-import { act, createClientRender, describeConformance, screen } from 'test/utils';
+import { spy } from 'sinon';
+import { createRenderer, screen } from '@mui/internal-test-utils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Drawer, { drawerClasses as classes } from '@mui/material/Drawer';
 import { getAnchor, isHorizontal } from './Drawer';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Drawer />', () => {
-  /**
-   * @type {ReturnType<typeof useFakeTimers>}
-   */
-  let clock;
-  beforeEach(() => {
-    clock = useFakeTimers();
-  });
-  afterEach(() => {
-    clock.restore();
-  });
-
-  const render = createClientRender();
+  const { clock, render } = createRenderer({ clock: 'fake' });
 
   describeConformance(
     <Drawer open disablePortal>
@@ -32,13 +22,7 @@ describe('<Drawer />', () => {
       testVariantProps: { variant: 'persistent' },
       testDeepOverrides: { slotName: 'paper', slotClassName: classes.paper },
       refInstanceof: window.HTMLDivElement,
-      skip: [
-        'componentProp',
-        'componentsProp',
-        'themeVariants',
-        // react-transition-group issue
-        'reactTestRenderer',
-      ],
+      skip: ['componentProp', 'componentsProp', 'themeVariants'],
     }),
   );
 
@@ -49,7 +33,50 @@ describe('<Drawer />', () => {
         exit: 2967,
       };
 
-      it('delay the slide transition to complete', () => {
+      it('should delay the slide transition to complete using default theme values by default', function test() {
+        if (/jsdom/.test(window.navigator.userAgent)) {
+          this.skip();
+        }
+        const theme = createTheme();
+        const enteringScreenDurationInSeconds = theme.transitions.duration.enteringScreen / 1000;
+        render(
+          <Drawer open>
+            <div />
+          </Drawer>,
+        );
+
+        const container = document.querySelector(`.${classes.root}`);
+        const backdropRoot = container.firstChild;
+        expect(backdropRoot).toHaveComputedStyle({
+          transitionDuration: `${enteringScreenDurationInSeconds}s`,
+        });
+      });
+
+      it('should delay the slide transition to complete using custom theme values', function test() {
+        if (/jsdom/.test(window.navigator.userAgent)) {
+          this.skip();
+        }
+        const theme = createTheme({
+          transitions: {
+            duration: {
+              enteringScreen: 1,
+            },
+          },
+        });
+        render(
+          <ThemeProvider theme={theme}>
+            <Drawer open>
+              <div />
+            </Drawer>
+          </ThemeProvider>,
+        );
+
+        const container = document.querySelector(`.${classes.root}`);
+        const backdropRoot = container.firstChild;
+        expect(backdropRoot).toHaveComputedStyle({ transitionDuration: '0.001s' });
+      });
+
+      it('delay the slide transition to complete using values provided via prop', () => {
         const handleEntered = spy();
         const { setProps } = render(
           <Drawer
@@ -65,9 +92,7 @@ describe('<Drawer />', () => {
 
         expect(handleEntered.callCount).to.equal(0);
 
-        act(() => {
-          clock.tick(transitionDuration.enter);
-        });
+        clock.tick(transitionDuration.enter);
 
         expect(handleEntered.callCount).to.equal(1);
       });
@@ -119,9 +144,7 @@ describe('<Drawer />', () => {
         expect(screen.getByTestId('child')).not.to.equal(null);
 
         setProps({ open: false });
-        act(() => {
-          clock.tick(transitionDuration);
-        });
+        clock.tick(transitionDuration);
 
         expect(screen.queryByTestId('child')).to.equal(null);
       });
@@ -158,9 +181,7 @@ describe('<Drawer />', () => {
 
       expect(handleEntered.callCount).to.equal(0);
 
-      act(() => {
-        clock.tick(transitionDuration);
-      });
+      clock.tick(transitionDuration);
 
       expect(handleEntered.callCount).to.equal(1);
       expect(container.firstChild.firstChild).to.have.class(classes.paper);

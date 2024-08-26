@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { createClientRender, describeConformance } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import TableBody, { tableBodyClasses as classes } from '@mui/material/TableBody';
 import Tablelvl2Context from '../Table/Tablelvl2Context';
+import describeConformance from '../../test/describeConformance';
 
 describe('<TableBody />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   function renderInTable(node) {
     return render(<table>{node}</table>);
@@ -14,10 +15,6 @@ describe('<TableBody />', () => {
   describeConformance(<TableBody />, () => ({
     classes,
     inheritComponent: 'tbody',
-    wrapMount: (mount) => (node) => {
-      const wrapper = mount(<table>{node}</table>);
-      return wrapper.find('table').childAt(0);
-    },
     render: (node) => {
       const { container, ...other } = render(<table>{node}</table>);
       return { container: container.firstChild, ...other };

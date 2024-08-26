@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { createClientRender, describeConformance } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import Card, { cardClasses as classes } from '@mui/material/Card';
 import Paper from '@mui/material/Paper';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Card />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<Card />, () => ({
     classes,

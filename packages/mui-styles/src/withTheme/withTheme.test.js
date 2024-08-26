@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { createClientRender } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import Input from '@mui/material/Input';
 import { isMuiElement } from '@mui/material/utils';
 import PropTypes from 'prop-types';
@@ -8,7 +8,7 @@ import withTheme from './withTheme';
 import ThemeProvider from '../ThemeProvider';
 
 describe('withTheme', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   it('should inject the theme', () => {
     const ref = React.createRef();
@@ -32,7 +32,9 @@ describe('withTheme', () => {
   });
 
   it('hoist statics', () => {
-    const Test = () => null;
+    function Test() {
+      return null;
+    }
     Test.someStatic = 'will not get hoisted';
     const TestWithTheme = withTheme(Test);
     expect(TestWithTheme.someStatic).to.equal(Test.someStatic);

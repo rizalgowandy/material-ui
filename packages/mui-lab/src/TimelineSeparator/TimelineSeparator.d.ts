@@ -24,10 +24,10 @@ export interface TimelineSeparatorProps
  *
  * Demos:
  *
- * - [Timeline](https://material-ui.com/components/timeline/)
+ * - [Timeline](https://next.mui.com/material-ui/react-timeline/)
  *
  * API:
  *
- * - [TimelineSeparator API](https://material-ui.com/api/timeline-separator/)
+ * - [TimelineSeparator API](https://next.mui.com/material-ui/api/timeline-separator/)
  */
-export default function TimelineSeparator(props: TimelineSeparatorProps): JSX.Element;
+export default function TimelineSeparator(props: TimelineSeparatorProps): React.JSX.Element;

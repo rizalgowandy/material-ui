@@ -1,12 +1,14 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { spy, useFakeTimers } from 'sinon';
-import { act, createClientRender, describeConformance } from 'test/utils';
+import { spy } from 'sinon';
+import { createRenderer } from '@mui/internal-test-utils';
 import { Transition } from 'react-transition-group';
 import Fade from '@mui/material/Fade';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Fade />', () => {
-  const render = createClientRender();
+  const { clock, render } = createRenderer();
 
   const defaultProps = {
     in: true,
@@ -14,6 +16,7 @@ describe('<Fade />', () => {
   };
 
   describeConformance(<Fade {...defaultProps} />, () => ({
+    render,
     classes: {},
     inheritComponent: Transition,
     refInstanceof: window.HTMLDivElement,
@@ -23,22 +26,11 @@ describe('<Fade />', () => {
       'themeDefaultProps',
       'themeStyleOverrides',
       'themeVariants',
-      // TODO: really?
-      // react-transition-group issue
-      'reactTestRenderer',
     ],
   }));
 
   describe('transition lifecycle', () => {
-    let clock;
-
-    beforeEach(() => {
-      clock = useFakeTimers();
-    });
-
-    afterEach(() => {
-      clock.restore();
-    });
+    clock.withFakeTimers();
 
     it('calls the appropriate callbacks for each transition', () => {
       const handleEnter = spy();
@@ -73,9 +65,7 @@ describe('<Fade />', () => {
       expect(handleEntering.callCount).to.equal(1);
       expect(handleEntering.args[0][0]).to.equal(child);
 
-      act(() => {
-        clock.tick(1000);
-      });
+      clock.tick(1000);
 
       expect(handleEntered.callCount).to.equal(1);
       expect(handleEntered.args[0][0]).to.equal(child);
@@ -92,9 +82,7 @@ describe('<Fade />', () => {
       expect(handleExiting.callCount).to.equal(1);
       expect(handleExiting.args[0][0]).to.equal(child);
 
-      act(() => {
-        clock.tick(1000);
-      });
+      clock.tick(1000);
 
       expect(handleExited.callCount).to.equal(1);
       expect(handleExited.args[0][0]).to.equal(child);
@@ -126,6 +114,66 @@ describe('<Fade />', () => {
 
       expect(element).toHaveInlineStyle({ opacity: '0' });
       expect(element).toHaveInlineStyle({ visibility: 'hidden' });
+    });
+  });
+
+  describe('prop: timeout', () => {
+    it('should render the default theme values by default', function test() {
+      if (/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+
+      const theme = createTheme();
+      const enteringScreenDurationInSeconds = theme.transitions.duration.enteringScreen / 1000;
+      const { getByTestId } = render(
+        <Fade in appear>
+          <div data-testid="child">Foo</div>
+        </Fade>,
+      );
+
+      const child = getByTestId('child');
+      expect(child).toHaveComputedStyle({
+        transitionDuration: `${enteringScreenDurationInSeconds}s`,
+      });
+    });
+
+    it('should render the custom theme values', function test() {
+      if (/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+
+      const theme = createTheme({
+        transitions: {
+          duration: {
+            enteringScreen: 1,
+          },
+        },
+      });
+      const { getByTestId } = render(
+        <ThemeProvider theme={theme}>
+          <Fade in appear>
+            <div data-testid="child">Foo</div>
+          </Fade>
+        </ThemeProvider>,
+      );
+
+      const child = getByTestId('child');
+      expect(child).toHaveComputedStyle({ transitionDuration: '0.001s' });
+    });
+
+    it('should render the values provided via prop', function test() {
+      if (/jsdom/.test(window.navigator.userAgent)) {
+        this.skip();
+      }
+
+      const { getByTestId } = render(
+        <Fade in appear timeout={{ enter: 1 }}>
+          <div data-testid="child">Foo</div>
+        </Fade>,
+      );
+
+      const child = getByTestId('child');
+      expect(child).toHaveComputedStyle({ transitionDuration: '0.001s' });
     });
   });
 });

@@ -1,15 +1,15 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { useFakeTimers } from 'sinon';
-import PropTypes from 'prop-types';
-import { describeConformance, act, createClientRender, fireEvent, screen } from 'test/utils';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { createRenderer, fireEvent, screen } from '@mui/internal-test-utils';
+import { ThemeProvider } from '@mui/system';
+import createTheme from '@mui/system/createTheme';
 import Grow from '@mui/material/Grow';
 import Popper from '@mui/material/Popper';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Popper />', () => {
   let rtlTheme;
-  const render = createClientRender();
+  const { clock, render } = createRenderer({ clock: 'fake' });
   const defaultProps = {
     anchorEl: () => document.createElement('svg'),
     children: <span>Hello World</span>,
@@ -25,15 +25,19 @@ describe('<Popper />', () => {
   describeConformance(<Popper {...defaultProps} />, () => ({
     classes: {},
     inheritComponent: 'div',
+    render,
     refInstanceof: window.HTMLDivElement,
+    testLegacyComponentsProp: true,
+    slots: {
+      root: {},
+    },
     skip: [
       'componentProp',
       'componentsProp',
       'themeDefaultProps',
       'themeStyleOverrides',
       'themeVariants',
-      // https://github.com/facebook/react/issues/11565
-      'reactTestRenderer',
+      'slotPropsCallback', // not supported yet
     ],
   }));
 
@@ -72,7 +76,7 @@ describe('<Popper />', () => {
         out: 'top',
       },
     ].forEach((test) => {
-      it(`should ${test.in === test.out ? 'not' : ''} flip ${
+      it(`should ${test.in === test.out ? 'not ' : ''}flip ${
         test.in
       } when direction=rtl is used`, () => {
         function Test() {
@@ -110,9 +114,7 @@ describe('<Popper />', () => {
       );
       expect(screen.getByTestId('placement')).to.have.text('bottom');
 
-      await act(async () => {
-        await popperRef.current.setOptions({ placement: 'top' });
-      });
+      await popperRef.current.setOptions({ placement: 'top' });
 
       expect(screen.getByTestId('placement')).to.have.text('bottom');
     });
@@ -162,7 +164,7 @@ describe('<Popper />', () => {
     });
 
     describe('by default', () => {
-      // Test case for https://github.com/mui-org/material-ui/issues/15180
+      // Test case for https://github.com/mui/material-ui/issues/15180
       it('should remove the transition children in the DOM when closed whilst transition status is entering', () => {
         const children = <p>Hello World</p>;
 
@@ -204,14 +206,7 @@ describe('<Popper />', () => {
   });
 
   describe('prop: transition', () => {
-    let clock;
-    beforeEach(() => {
-      clock = useFakeTimers();
-    });
-
-    afterEach(() => {
-      clock.restore();
-    });
+    clock.withFakeTimers();
 
     it('should work', () => {
       const { queryByRole, getByRole, setProps } = render(
@@ -227,9 +222,7 @@ describe('<Popper />', () => {
       expect(getByRole('tooltip')).to.have.text('Hello World');
 
       setProps({ anchorEl: null, open: false });
-      act(() => {
-        clock.tick(0);
-      });
+      clock.tick(0);
 
       expect(queryByRole('tooltip')).to.equal(null);
     });
@@ -271,24 +264,44 @@ describe('<Popper />', () => {
     });
   });
 
-  describe('warnings', () => {
-    beforeEach(() => {
-      PropTypes.resetWarningCache();
-    });
+  describe('display', () => {
+    clock.withFakeTimers();
 
-    it('should warn if anchorEl is not valid', () => {
-      expect(() => {
-        PropTypes.checkPropTypes(
-          Popper.propTypes,
-          {
-            ...defaultProps,
-            open: true,
-            anchorEl: null,
-          },
-          'prop',
-          'MockedPopper',
-        );
-      }).toErrorDev('It should be an HTML element instance');
+    it('should keep display:none when not toggled and transition/keepMounted/disablePortal props are set', () => {
+      const { getByRole, setProps } = render(
+        <Popper {...defaultProps} open={false} keepMounted transition disablePortal>
+          {({ TransitionProps }) => (
+            <Grow {...TransitionProps}>
+              <span>Hello World</span>
+            </Grow>
+          )}
+        </Popper>,
+      );
+
+      expect(getByRole('tooltip', { hidden: true }).style.display).to.equal('none');
+
+      setProps({ open: true });
+      clock.tick(0);
+
+      setProps({ open: false });
+      clock.tick(0);
+      expect(getByRole('tooltip', { hidden: true }).style.display).to.equal('none');
+    });
+  });
+
+  describe('default props', () => {
+    it('should consume theme default props', () => {
+      const container = document.createElement('div');
+      const theme = createTheme({ components: { MuiPopper: { defaultProps: { container } } } });
+      render(
+        <ThemeProvider theme={theme}>
+          <Popper {...defaultProps} open>
+            <p id="content">Hello World</p>
+          </Popper>
+        </ThemeProvider>,
+      );
+
+      expect(container).to.have.text('Hello World');
     });
   });
 });

@@ -1,19 +1,32 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { describeConformance, act, createClientRender, fireEvent } from 'test/utils';
+import { act, createRenderer, fireEvent } from '@mui/internal-test-utils';
 import Switch, { switchClasses as classes } from '@mui/material/Switch';
 import FormControl from '@mui/material/FormControl';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Switch />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<Switch />, () => ({
     classes,
     render,
     muiName: 'MuiSwitch',
-    testDeepOverrides: { slotName: 'track', slotClassName: classes.track },
+    testDeepOverrides: [
+      { slotName: 'track', slotClassName: classes.track },
+      { slotName: 'input', slotClassName: classes.input },
+    ],
     refInstanceof: window.HTMLSpanElement,
-    skip: ['componentProp', 'componentsProp', 'propsSpread', 'themeDefaultProps', 'themeVariants'],
+    skip: [
+      'componentProp',
+      'componentsProp',
+      'themeDefaultProps',
+      'themeVariants',
+      // Props are spread to the root's child but className is added to the root
+      // We cannot use the standard mergeClassName test which relies on data-testid on the root
+      // We should fix this when refactoring with Base UI
+      'mergeClassName',
+    ],
   }));
 
   describe('styleSheet', () => {
@@ -39,7 +52,7 @@ describe('<Switch />', () => {
     expect(root.childNodes[1]).to.have.class(classes.track);
   });
 
-  it('renders a `role="checkbox"` with the Unechecked state by default', () => {
+  it('renders a `role="checkbox"` with the Unchecked state by default', () => {
     const { getByRole } = render(<Switch />);
 
     expect(getByRole('checkbox')).to.have.property('checked', false);
@@ -89,6 +102,10 @@ describe('<Switch />', () => {
     expect(getByRole('checkbox')).to.have.property('checked', false);
   });
 
+  it('should not show warnings when custom `type` is provided', () => {
+    expect(() => render(<Switch type="submit" />)).not.toErrorDev();
+  });
+
   describe('with FormControl', () => {
     describe('enabled', () => {
       it('should not have the disabled class', () => {
@@ -132,6 +149,14 @@ describe('<Switch />', () => {
 
         expect(getByRole('checkbox')).not.to.have.attribute('disabled');
       });
+    });
+  });
+
+  describe('mergeClassName', () => {
+    it('should merge the className', () => {
+      const { container } = render(<Switch className="test-class-name" />);
+
+      expect(container.firstChild).to.have.class('test-class-name');
     });
   });
 });

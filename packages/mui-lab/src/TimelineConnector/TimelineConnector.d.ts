@@ -24,10 +24,10 @@ export interface TimelineConnectorProps
  *
  * Demos:
  *
- * - [Timeline](https://material-ui.com/components/timeline/)
+ * - [Timeline](https://next.mui.com/material-ui/react-timeline/)
  *
  * API:
  *
- * - [TimelineConnector API](https://material-ui.com/api/timeline-connector/)
+ * - [TimelineConnector API](https://next.mui.com/material-ui/api/timeline-connector/)
  */
-export default function TimelineConnector(props: TimelineConnectorProps): JSX.Element;
+export default function TimelineConnector(props: TimelineConnectorProps): React.JSX.Element;

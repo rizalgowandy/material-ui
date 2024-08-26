@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { expect } from 'chai';
+import { createRenderer } from '@mui/internal-test-utils';
 import { createTheme, ThemeProvider, styled } from '@mui/material/styles';
-import { createClientRender, describeConformance } from 'test/utils';
 import NativeSelect, { nativeSelectClasses as classes } from '@mui/material/NativeSelect';
 import Input, { inputClasses } from '@mui/material/Input';
+import describeConformance from '../../test/describeConformance';
 
 describe('<NativeSelect />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
   const defaultProps = {
     input: <Input />,
     children: [

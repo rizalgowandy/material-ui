@@ -1,10 +1,13 @@
-import { generateUtilityClass, generateUtilityClasses } from '@mui/core';
+import generateUtilityClasses from '@mui/utils/generateUtilityClasses';
+import generateUtilityClass from '@mui/utils/generateUtilityClass';
 
 export interface NativeSelectClasses {
   /** Styles applied to the root element. */
   root: string;
   /** Styles applied to the select component `select` class. */
   select: string;
+  /** Styles applied to the select component if `multiple={true}`. */
+  multiple: string;
   /** Styles applied to the select component if `variant="filled"`. */
   filled: string;
   /** Styles applied to the select component if `variant="outlined"`. */
@@ -25,6 +28,8 @@ export interface NativeSelectClasses {
   iconStandard: string;
   /** Styles applied to the underlying native input component. */
   nativeInput: string;
+  /** State class applied to the select component `error` class. */
+  error: string;
 }
 
 export type NativeSelectClassKey = keyof NativeSelectClasses;
@@ -36,6 +41,7 @@ export function getNativeSelectUtilityClasses(slot: string): string {
 const nativeSelectClasses: NativeSelectClasses = generateUtilityClasses('MuiNativeSelect', [
   'root',
   'select',
+  'multiple',
   'filled',
   'outlined',
   'standard',
@@ -46,6 +52,7 @@ const nativeSelectClasses: NativeSelectClasses = generateUtilityClasses('MuiNati
   'iconOutlined',
   'iconStandard',
   'nativeInput',
+  'error',
 ]);
 
 export default nativeSelectClasses;

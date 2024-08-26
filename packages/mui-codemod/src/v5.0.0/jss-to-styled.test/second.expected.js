@@ -1,5 +1,5 @@
-import React from 'react';
-import { styled } from '@material-ui/core/styles';
+import * as React from 'react';
+import { styled } from '@mui/material/styles';
 import Typography from '@material-ui/core/Typography';
 import Container from 'modules/components/Container';
 import Button from 'modules/components/Button';
@@ -63,7 +63,7 @@ function AffiliatesHero() {
 
 
   return (
-    <Root className={classes.root}>
+    (<Root className={classes.root}>
       <Container className={classes.container}>
         <Typography variant="h1" align="center" color="textPrimary" className={classes.title}>
           Affiliate Program
@@ -75,7 +75,7 @@ function AffiliatesHero() {
           <Button
             variant="contained"
             component={MuiLink}
-            href="mailto:store@material-ui.com"
+            href="mailto:store@mui.com"
             className={classes.apply}
           >
             Apply now
@@ -85,7 +85,7 @@ function AffiliatesHero() {
           </Button>
         </div>
       </Container>
-    </Root>
+    </Root>)
   );
 }
 

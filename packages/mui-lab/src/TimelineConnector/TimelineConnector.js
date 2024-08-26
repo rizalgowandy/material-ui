@@ -1,7 +1,8 @@
+'use client';
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
-import { unstable_composeClasses as composeClasses } from '@mui/core';
+import { unstable_composeClasses as composeClasses } from '@mui/base';
 import { styled, useThemeProps } from '@mui/material/styles';
 import { getTimelineConnectorUtilityClass } from './timelineConnectorClasses';
 
@@ -22,7 +23,7 @@ const TimelineConnectorRoot = styled('span', {
 })(({ theme }) => {
   return {
     width: 2,
-    backgroundColor: theme.palette.grey[400],
+    backgroundColor: (theme.vars || theme).palette.grey[400],
     flexGrow: 1,
   };
 });
@@ -50,10 +51,10 @@ const TimelineConnector = React.forwardRef(function TimelineConnector(inProps, r
 });
 
 TimelineConnector.propTypes /* remove-proptypes */ = {
-  // ----------------------------- Warning --------------------------------
-  // | These PropTypes are generated from the TypeScript type definitions |
-  // |     To update them edit the d.ts file and run "yarn proptypes"     |
-  // ----------------------------------------------------------------------
+  // ┌────────────────────────────── Warning ──────────────────────────────┐
+  // │ These PropTypes are generated from the TypeScript type definitions. │
+  // │    To update them, edit the d.ts file and run `pnpm proptypes`.     │
+  // └─────────────────────────────────────────────────────────────────────┘
   /**
    * The content of the component.
    */
@@ -69,7 +70,11 @@ TimelineConnector.propTypes /* remove-proptypes */ = {
   /**
    * The system prop that allows defining system overrides as well as additional CSS styles.
    */
-  sx: PropTypes.object,
+  sx: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.func, PropTypes.object, PropTypes.bool])),
+    PropTypes.func,
+    PropTypes.object,
+  ]),
 };
 
 export default TimelineConnector;

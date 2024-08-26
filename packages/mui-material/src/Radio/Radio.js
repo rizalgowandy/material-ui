@@ -1,22 +1,27 @@
+'use client';
 import * as React from 'react';
 import PropTypes from 'prop-types';
-import { refType } from '@mui/utils';
-import { unstable_composeClasses as composeClasses } from '@mui/core';
-import { alpha } from '@mui/system';
+import clsx from 'clsx';
+import refType from '@mui/utils/refType';
+import composeClasses from '@mui/utils/composeClasses';
+import { alpha } from '@mui/system/colorManipulator';
 import SwitchBase from '../internal/SwitchBase';
-import useThemeProps from '../styles/useThemeProps';
 import RadioButtonIcon from './RadioButtonIcon';
 import capitalize from '../utils/capitalize';
 import createChainedFunction from '../utils/createChainedFunction';
 import useRadioGroup from '../RadioGroup/useRadioGroup';
 import radioClasses, { getRadioUtilityClass } from './radioClasses';
-import styled, { rootShouldForwardProp } from '../styles/styled';
+import rootShouldForwardProp from '../styles/rootShouldForwardProp';
+import { styled } from '../zero-styled';
+import memoTheme from '../utils/memoTheme';
+
+import { useDefaultProps } from '../DefaultPropsProvider';
 
 const useUtilityClasses = (ownerState) => {
-  const { classes, color } = ownerState;
+  const { classes, color, size } = ownerState;
 
   const slots = {
-    root: ['root', `color${capitalize(color)}`],
+    root: ['root', `color${capitalize(color)}`, size !== 'medium' && `size${capitalize(size)}`],
   };
 
   return {
@@ -32,37 +37,81 @@ const RadioRoot = styled(SwitchBase, {
   overridesResolver: (props, styles) => {
     const { ownerState } = props;
 
-    return [styles.root, styles[`color${capitalize(ownerState.color)}`]];
+    return [
+      styles.root,
+      ownerState.size !== 'medium' && styles[`size${capitalize(ownerState.size)}`],
+      styles[`color${capitalize(ownerState.color)}`],
+    ];
   },
-})(({ theme, ownerState }) => ({
-  color: theme.palette.text.secondary,
-  '&:hover': {
-    backgroundColor: alpha(
-      ownerState.color === 'default'
-        ? theme.palette.action.active
-        : theme.palette[ownerState.color].main,
-      theme.palette.action.hoverOpacity,
-    ),
-    // Reset on touch devices, it doesn't add specificity
-    '@media (hover: none)': {
-      backgroundColor: 'transparent',
+})(
+  memoTheme(({ theme }) => ({
+    color: (theme.vars || theme).palette.text.secondary,
+    [`&.${radioClasses.disabled}`]: {
+      color: (theme.vars || theme).palette.action.disabled,
     },
-  },
-  ...(ownerState.color !== 'default' && {
-    [`&.${radioClasses.checked}`]: {
-      color: theme.palette[ownerState.color].main,
-    },
-  }),
-  [`&.${radioClasses.disabled}`]: {
-    color: theme.palette.action.disabled,
-  },
-}));
+    variants: [
+      {
+        props: { color: 'default', disableRipple: false },
+        style: {
+          '&:hover': {
+            backgroundColor: theme.vars
+              ? `rgba(${theme.vars.palette.action.activeChannel} / ${theme.vars.palette.action.hoverOpacity})`
+              : alpha(theme.palette.action.active, theme.palette.action.hoverOpacity),
+          },
+        },
+      },
+      ...Object.entries(theme.palette)
+        .filter(([, palette]) => palette && palette.main)
+        .map(([color]) => ({
+          props: { color, disableRipple: false },
+          style: {
+            '&:hover': {
+              backgroundColor: theme.vars
+                ? `rgba(${theme.vars.palette[color].mainChannel} / ${theme.vars.palette.action.hoverOpacity})`
+                : alpha(theme.palette[color].main, theme.palette.action.hoverOpacity),
+            },
+          },
+        })),
+      ...Object.entries(theme.palette)
+        .filter(([, palette]) => palette && palette.main)
+        .map(([color]) => ({
+          props: { color },
+          style: {
+            [`&.${radioClasses.checked}`]: {
+              color: (theme.vars || theme).palette[color].main,
+            },
+          },
+        })),
+      {
+        // Should be last to override other colors
+        props: { disableRipple: false },
+        style: {
+          // Reset on touch devices, it doesn't add specificity
+          '&:hover': {
+            '@media (hover: none)': {
+              backgroundColor: 'transparent',
+            },
+          },
+        },
+      },
+    ],
+  })),
+);
+
+function areEqualValues(a, b) {
+  if (typeof b === 'object' && b !== null) {
+    return a === b;
+  }
+
+  // The value could be a number, the DOM will stringify it anyway.
+  return String(a) === String(b);
+}
 
 const defaultCheckedIcon = <RadioButtonIcon checked />;
 const defaultIcon = <RadioButtonIcon />;
 
 const Radio = React.forwardRef(function Radio(inProps, ref) {
-  const props = useThemeProps({ props: inProps, name: 'MuiRadio' });
+  const props = useDefaultProps({ props: inProps, name: 'MuiRadio' });
   const {
     checked: checkedProp,
     checkedIcon = defaultCheckedIcon,
@@ -71,10 +120,13 @@ const Radio = React.forwardRef(function Radio(inProps, ref) {
     name: nameProp,
     onChange: onChangeProp,
     size = 'medium',
+    className,
+    disableRipple = false,
     ...other
   } = props;
   const ownerState = {
     ...props,
+    disableRipple,
     color,
     size,
   };
@@ -88,7 +140,7 @@ const Radio = React.forwardRef(function Radio(inProps, ref) {
 
   if (radioGroup) {
     if (typeof checked === 'undefined') {
-      checked = radioGroup.value === props.value;
+      checked = areEqualValues(radioGroup.value, props.value);
     }
     if (typeof name === 'undefined') {
       name = radioGroup.name;
@@ -108,16 +160,17 @@ const Radio = React.forwardRef(function Radio(inProps, ref) {
       checked={checked}
       onChange={onChange}
       ref={ref}
+      className={clsx(classes.root, className)}
       {...other}
     />
   );
 });
 
 Radio.propTypes /* remove-proptypes */ = {
-  // ----------------------------- Warning --------------------------------
-  // | These PropTypes are generated from the TypeScript type definitions |
-  // |     To update them edit the d.ts file and run "yarn proptypes"     |
-  // ----------------------------------------------------------------------
+  // ┌────────────────────────────── Warning ──────────────────────────────┐
+  // │ These PropTypes are generated from the TypeScript type definitions. │
+  // │    To update them, edit the d.ts file and run `pnpm proptypes`.     │
+  // └─────────────────────────────────────────────────────────────────────┘
   /**
    * If `true`, the component is checked.
    */
@@ -132,7 +185,13 @@ Radio.propTypes /* remove-proptypes */ = {
    */
   classes: PropTypes.object,
   /**
-   * The color of the component. It supports those theme colors that make sense for this component.
+   * @ignore
+   */
+  className: PropTypes.string,
+  /**
+   * The color of the component.
+   * It supports both default and custom theme colors, which can be added as shown in the
+   * [palette customization guide](https://mui.com/material-ui/customization/palette/#custom-colors).
    * @default 'primary'
    */
   color: PropTypes /* @typescript-to-proptypes-ignore */.oneOfType([
@@ -145,6 +204,7 @@ Radio.propTypes /* remove-proptypes */ = {
   disabled: PropTypes.bool,
   /**
    * If `true`, the ripple effect is disabled.
+   * @default false
    */
   disableRipple: PropTypes.bool,
   /**
@@ -178,6 +238,7 @@ Radio.propTypes /* remove-proptypes */ = {
   onChange: PropTypes.func,
   /**
    * If `true`, the `input` element is required.
+   * @default false
    */
   required: PropTypes.bool,
   /**
@@ -192,7 +253,11 @@ Radio.propTypes /* remove-proptypes */ = {
   /**
    * The system prop that allows defining system overrides as well as additional CSS styles.
    */
-  sx: PropTypes.object,
+  sx: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.func, PropTypes.object, PropTypes.bool])),
+    PropTypes.func,
+    PropTypes.object,
+  ]),
   /**
    * The value of the component. The DOM API casts this to a string.
    */

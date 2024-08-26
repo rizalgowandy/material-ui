@@ -1,11 +1,14 @@
+'use client';
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import { Transition } from 'react-transition-group';
-import { elementAcceptingRef, HTMLElementType, chainPropTypes } from '@mui/utils';
+import chainPropTypes from '@mui/utils/chainPropTypes';
+import HTMLElementType from '@mui/utils/HTMLElementType';
+import elementAcceptingRef from '@mui/utils/elementAcceptingRef';
+import getReactNodeRef from '@mui/utils/getReactNodeRef';
 import debounce from '../utils/debounce';
 import useForkRef from '../utils/useForkRef';
-import useTheme from '../styles/useTheme';
-import { duration, easing } from '../styles/createTransitions';
+import { useTheme } from '../zero-styled';
 import { reflow, getTransitionProps } from '../transitions/utils';
 import { ownerWindow } from '../utils';
 
@@ -79,22 +82,24 @@ export function setTranslateValue(direction, node, containerProp) {
   }
 }
 
-const defaultEasing = {
-  enter: easing.easeOut,
-  exit: easing.sharp,
-};
-
-const defaultTimeout = {
-  enter: duration.enteringScreen,
-  exit: duration.leavingScreen,
-};
-
 /**
- * The Slide transition is used by the [Drawer](/components/drawers/) component.
+ * The Slide transition is used by the [Drawer](/material-ui/react-drawer/) component.
  * It uses [react-transition-group](https://github.com/reactjs/react-transition-group) internally.
  */
 const Slide = React.forwardRef(function Slide(props, ref) {
+  const theme = useTheme();
+  const defaultEasing = {
+    enter: theme.transitions.easing.easeOut,
+    exit: theme.transitions.easing.sharp,
+  };
+
+  const defaultTimeout = {
+    enter: theme.transitions.duration.enteringScreen,
+    exit: theme.transitions.duration.leavingScreen,
+  };
+
   const {
+    addEndListener,
     appear = true,
     children,
     container: containerProp,
@@ -114,10 +119,8 @@ const Slide = React.forwardRef(function Slide(props, ref) {
     ...other
   } = props;
 
-  const theme = useTheme();
   const childrenRef = React.useRef(null);
-  const handleRefIntermediary = useForkRef(children.ref, childrenRef);
-  const handleRef = useForkRef(handleRefIntermediary, ref);
+  const handleRef = useForkRef(getReactNodeRef(children), childrenRef, ref);
 
   const normalizedTransitionCallback = (callback) => (isAppearing) => {
     if (callback) {
@@ -193,6 +196,13 @@ const Slide = React.forwardRef(function Slide(props, ref) {
     }
   });
 
+  const handleAddEndListener = (next) => {
+    if (addEndListener) {
+      // Old call signature before `react-transition-group` implemented `nodeRef`
+      addEndListener(childrenRef.current, next);
+    }
+  };
+
   const updatePosition = React.useCallback(() => {
     if (childrenRef.current) {
       setTranslateValue(direction, childrenRef.current, containerProp);
@@ -236,6 +246,7 @@ const Slide = React.forwardRef(function Slide(props, ref) {
       onExit={handleExit}
       onExited={handleExited}
       onExiting={handleExiting}
+      addEndListener={handleAddEndListener}
       appear={appear}
       in={inProp}
       timeout={timeout}
@@ -257,10 +268,16 @@ const Slide = React.forwardRef(function Slide(props, ref) {
 });
 
 Slide.propTypes /* remove-proptypes */ = {
-  // ----------------------------- Warning --------------------------------
-  // | These PropTypes are generated from the TypeScript type definitions |
-  // |     To update them edit the d.ts file and run "yarn proptypes"     |
-  // ----------------------------------------------------------------------
+  // ┌────────────────────────────── Warning ──────────────────────────────┐
+  // │ These PropTypes are generated from the TypeScript type definitions. │
+  // │    To update them, edit the d.ts file and run `pnpm proptypes`.     │
+  // └─────────────────────────────────────────────────────────────────────┘
+  /**
+   * Add a custom transition end trigger. Called with the transitioning DOM
+   * node and a done callback. Allows for more fine grained transition end
+   * logic. Note: Timeouts are still used as a fallback if provided.
+   */
+  addEndListener: PropTypes.func,
   /**
    * Perform the enter transition when it first mounts if `in` is also `true`.
    * Set this to `false` to disable this behavior.
@@ -270,7 +287,7 @@ Slide.propTypes /* remove-proptypes */ = {
   /**
    * A single child content element.
    */
-  children: elementAcceptingRef,
+  children: elementAcceptingRef.isRequired,
   /**
    * An HTML element, or a function that returns one.
    * It's used to set the container the Slide is transitioning from.
@@ -323,8 +340,8 @@ Slide.propTypes /* remove-proptypes */ = {
    * The transition timing function.
    * You may specify a single easing or a object containing enter and exit values.
    * @default {
-   *   enter: easing.easeOut,
-   *   exit: easing.sharp,
+   *   enter: theme.transitions.easing.easeOut,
+   *   exit: theme.transitions.easing.sharp,
    * }
    */
   easing: PropTypes.oneOfType([
@@ -370,8 +387,8 @@ Slide.propTypes /* remove-proptypes */ = {
    * The duration for the transition, in milliseconds.
    * You may specify a single timeout for all transitions, or individually with an object.
    * @default {
-   *   enter: duration.enteringScreen,
-   *   exit: duration.leavingScreen,
+   *   enter: theme.transitions.duration.enteringScreen,
+   *   exit: theme.transitions.duration.leavingScreen,
    * }
    */
   timeout: PropTypes.oneOfType([

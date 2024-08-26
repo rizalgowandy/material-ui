@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { expect } from 'chai';
 import { spy } from 'sinon';
-import { describeConformance, createClientRender, fireEvent } from 'test/utils';
+import { createRenderer, fireEvent } from '@mui/internal-test-utils';
 import BottomNavigation, {
   bottomNavigationClasses as classes,
 } from '@mui/material/BottomNavigation';
@@ -9,9 +9,10 @@ import BottomNavigationAction, {
   bottomNavigationActionClasses as actionClasses,
 } from '@mui/material/BottomNavigationAction';
 import Icon from '@mui/material/Icon';
+import describeConformance from '../../test/describeConformance';
 
 describe('<BottomNavigation />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   const icon = <Icon>restore</Icon>;
   const getBottomNavigation = (container) => container.firstChild;

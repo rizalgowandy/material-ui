@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import * as React from 'react';
-import { createClientRender, describeConformance } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import ImageList, { imageListClasses as classes } from '@mui/material/ImageList';
+import describeConformance from '../../test/describeConformance';
 
 const itemsData = [
   {
@@ -17,7 +18,7 @@ const itemsData = [
 ];
 
 describe('<ImageList />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(
     <ImageList>
@@ -36,12 +37,7 @@ describe('<ImageList />', () => {
   );
 
   const children = itemsData.map((item) => (
-    <span
-      key={item.title}
-      title={item.title}
-      subtitle={<span>by: {item.author}</span>}
-      data-testid="test-children"
-    >
+    <span key={item.title} title={item.title} data-testid="test-children">
       <img src={item.img} alt="foo" />
     </span>
   ));
@@ -73,13 +69,13 @@ describe('<ImageList />', () => {
 
     it('should render with the quilted class', () => {
       const { getByTestId } = render(
-        <ImageList data-testid="test-root" variant="woven">
+        <ImageList data-testid="test-root" variant="quilted">
           {children}
         </ImageList>,
       );
 
       expect(getByTestId('test-root')).to.have.class(classes.root);
-      expect(getByTestId('test-root')).to.have.class(classes.woven);
+      expect(getByTestId('test-root')).to.have.class(classes.quilted);
     });
 
     it('should render with the woven class', () => {

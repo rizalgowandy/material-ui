@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { expect } from 'chai';
 import { spy } from 'sinon';
-import { describeConformance, createClientRender, within } from 'test/utils';
+import { createRenderer, within } from '@mui/internal-test-utils';
 import BottomNavigationAction, {
   bottomNavigationActionClasses as classes,
 } from '@mui/material/BottomNavigationAction';
 import ButtonBase from '@mui/material/ButtonBase';
+import describeConformance from '../../test/describeConformance';
 
 describe('<BottomNavigationAction />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<BottomNavigationAction />, () => ({
     classes,

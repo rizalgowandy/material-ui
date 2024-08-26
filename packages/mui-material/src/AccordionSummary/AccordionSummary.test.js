@@ -1,15 +1,16 @@
 import * as React from 'react';
 import { expect } from 'chai';
 import { spy } from 'sinon';
-import { describeConformance, act, createClientRender, fireEvent } from 'test/utils';
+import { act, createRenderer, fireEvent } from '@mui/internal-test-utils';
 import AccordionSummary, {
   accordionSummaryClasses as classes,
 } from '@mui/material/AccordionSummary';
 import Accordion from '@mui/material/Accordion';
 import ButtonBase from '@mui/material/ButtonBase';
+import describeConformance from '../../test/describeConformance';
 
 describe('<AccordionSummary />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<AccordionSummary />, () => ({
     classes,
@@ -85,7 +86,7 @@ describe('<AccordionSummary />', () => {
   it('fires onChange of the Accordion if clicked', () => {
     const handleChange = spy();
     const { getByRole } = render(
-      <Accordion onChange={handleChange}>
+      <Accordion onChange={handleChange} expanded={false}>
         <AccordionSummary />
       </Accordion>,
     );
@@ -97,7 +98,12 @@ describe('<AccordionSummary />', () => {
     expect(handleChange.callCount).to.equal(1);
   });
 
-  it('calls onFocusVisible if focused visibly', () => {
+  it('calls onFocusVisible if focused visibly', function test() {
+    if (/jsdom/.test(window.navigator.userAgent)) {
+      // JSDOM doesn't support :focus-visible
+      this.skip();
+    }
+
     const handleFocusVisible = spy();
     const { getByRole } = render(<AccordionSummary onFocusVisible={handleFocusVisible} />);
     // simulate pointer device

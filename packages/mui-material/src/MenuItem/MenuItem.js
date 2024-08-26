@@ -1,10 +1,13 @@
+'use client';
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
-import { unstable_composeClasses as composeClasses } from '@mui/core';
-import { alpha } from '@mui/system';
-import styled, { rootShouldForwardProp } from '../styles/styled';
-import useThemeProps from '../styles/useThemeProps';
+import composeClasses from '@mui/utils/composeClasses';
+import { alpha } from '@mui/system/colorManipulator';
+import rootShouldForwardProp from '../styles/rootShouldForwardProp';
+import { styled } from '../zero-styled';
+import memoTheme from '../utils/memoTheme';
+import { useDefaultProps } from '../DefaultPropsProvider';
 import ListContext from '../List/ListContext';
 import ButtonBase from '../ButtonBase';
 import useEnhancedEffect from '../utils/useEnhancedEffect';
@@ -51,92 +54,118 @@ const MenuItemRoot = styled(ButtonBase, {
   name: 'MuiMenuItem',
   slot: 'Root',
   overridesResolver,
-})(({ theme, ownerState }) => ({
-  ...theme.typography.body1,
-  display: 'flex',
-  justifyContent: 'flex-start',
-  alignItems: 'center',
-  position: 'relative',
-  textDecoration: 'none',
-  minHeight: 48,
-  paddingTop: 6,
-  paddingBottom: 6,
-  boxSizing: 'border-box',
-  whiteSpace: 'nowrap',
-  ...(!ownerState.disableGutters && {
-    paddingLeft: 16,
-    paddingRight: 16,
-  }),
-  ...(ownerState.divider && {
-    borderBottom: `1px solid ${theme.palette.divider}`,
-    backgroundClip: 'padding-box',
-  }),
-  '&:hover': {
+})(
+  memoTheme(({ theme }) => ({
+    ...theme.typography.body1,
+    display: 'flex',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    position: 'relative',
     textDecoration: 'none',
-    backgroundColor: theme.palette.action.hover,
-    // Reset on touch devices, it doesn't add specificity
-    '@media (hover: none)': {
-      backgroundColor: 'transparent',
+    minHeight: 48,
+    paddingTop: 6,
+    paddingBottom: 6,
+    boxSizing: 'border-box',
+    whiteSpace: 'nowrap',
+    '&:hover': {
+      textDecoration: 'none',
+      backgroundColor: (theme.vars || theme).palette.action.hover,
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: 'transparent',
+      },
     },
-  },
-  [`&.${menuItemClasses.selected}`]: {
-    backgroundColor: alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
+    [`&.${menuItemClasses.selected}`]: {
+      backgroundColor: theme.vars
+        ? `rgba(${theme.vars.palette.primary.mainChannel} / ${theme.vars.palette.action.selectedOpacity})`
+        : alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
+      [`&.${menuItemClasses.focusVisible}`]: {
+        backgroundColor: theme.vars
+          ? `rgba(${theme.vars.palette.primary.mainChannel} / calc(${theme.vars.palette.action.selectedOpacity} + ${theme.vars.palette.action.focusOpacity}))`
+          : alpha(
+              theme.palette.primary.main,
+              theme.palette.action.selectedOpacity + theme.palette.action.focusOpacity,
+            ),
+      },
+    },
+    [`&.${menuItemClasses.selected}:hover`]: {
+      backgroundColor: theme.vars
+        ? `rgba(${theme.vars.palette.primary.mainChannel} / calc(${theme.vars.palette.action.selectedOpacity} + ${theme.vars.palette.action.hoverOpacity}))`
+        : alpha(
+            theme.palette.primary.main,
+            theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity,
+          ),
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: theme.vars
+          ? `rgba(${theme.vars.palette.primary.mainChannel} / ${theme.vars.palette.action.selectedOpacity})`
+          : alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
+      },
+    },
     [`&.${menuItemClasses.focusVisible}`]: {
-      backgroundColor: alpha(
-        theme.palette.primary.main,
-        theme.palette.action.selectedOpacity + theme.palette.action.focusOpacity,
-      ),
+      backgroundColor: (theme.vars || theme).palette.action.focus,
     },
-  },
-  [`&.${menuItemClasses.selected}:hover`]: {
-    backgroundColor: alpha(
-      theme.palette.primary.main,
-      theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity,
-    ),
-    // Reset on touch devices, it doesn't add specificity
-    '@media (hover: none)': {
-      backgroundColor: alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
+    [`&.${menuItemClasses.disabled}`]: {
+      opacity: (theme.vars || theme).palette.action.disabledOpacity,
     },
-  },
-  [`&.${menuItemClasses.focusVisible}`]: {
-    backgroundColor: theme.palette.action.focus,
-  },
-  [`&.${menuItemClasses.disabled}`]: {
-    opacity: theme.palette.action.disabledOpacity,
-  },
-  [`& + .${dividerClasses.root}`]: {
-    marginTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
-  },
-  [`& + .${dividerClasses.inset}`]: {
-    marginLeft: 52,
-  },
-  [`& .${listItemTextClasses.root}`]: {
-    marginTop: 0,
-    marginBottom: 0,
-  },
-  [`& .${listItemTextClasses.inset}`]: {
-    paddingLeft: 36,
-  },
-  [`& .${listItemIconClasses.root}`]: {
-    minWidth: 36,
-  },
-  ...(!ownerState.dense && {
-    [theme.breakpoints.up('sm')]: {
-      minHeight: 'auto',
+    [`& + .${dividerClasses.root}`]: {
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(1),
     },
-  }),
-  ...(ownerState.dense && {
-    minHeight: 36,
-    ...theme.typography.body2,
-    [`& .${listItemIconClasses.root} svg`]: {
-      fontSize: '1.25rem',
+    [`& + .${dividerClasses.inset}`]: {
+      marginLeft: 52,
     },
-  }),
-}));
+    [`& .${listItemTextClasses.root}`]: {
+      marginTop: 0,
+      marginBottom: 0,
+    },
+    [`& .${listItemTextClasses.inset}`]: {
+      paddingLeft: 36,
+    },
+    [`& .${listItemIconClasses.root}`]: {
+      minWidth: 36,
+    },
+    variants: [
+      {
+        props: ({ ownerState }) => !ownerState.disableGutters,
+        style: {
+          paddingLeft: 16,
+          paddingRight: 16,
+        },
+      },
+      {
+        props: ({ ownerState }) => ownerState.divider,
+        style: {
+          borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`,
+          backgroundClip: 'padding-box',
+        },
+      },
+      {
+        props: ({ ownerState }) => !ownerState.dense,
+        style: {
+          [theme.breakpoints.up('sm')]: {
+            minHeight: 'auto',
+          },
+        },
+      },
+      {
+        props: ({ ownerState }) => ownerState.dense,
+        style: {
+          minHeight: 32, // https://m2.material.io/components/menus#specs > Dense
+          paddingTop: 4,
+          paddingBottom: 4,
+          ...theme.typography.body2,
+          [`& .${listItemIconClasses.root} svg`]: {
+            fontSize: '1.25rem',
+          },
+        },
+      },
+    ],
+  })),
+);
 
 const MenuItem = React.forwardRef(function MenuItem(inProps, ref) {
-  const props = useThemeProps({ props: inProps, name: 'MuiMenuItem' });
+  const props = useDefaultProps({ props: inProps, name: 'MuiMenuItem' });
   const {
     autoFocus = false,
     component = 'li',
@@ -146,14 +175,18 @@ const MenuItem = React.forwardRef(function MenuItem(inProps, ref) {
     focusVisibleClassName,
     role = 'menuitem',
     tabIndex: tabIndexProp,
+    className,
     ...other
   } = props;
 
   const context = React.useContext(ListContext);
-  const childContext = {
-    dense: dense || context.dense || false,
-    disableGutters,
-  };
+  const childContext = React.useMemo(
+    () => ({
+      dense: dense || context.dense || false,
+      disableGutters,
+    }),
+    [context.dense, dense, disableGutters],
+  );
 
   const menuItemRef = React.useRef(null);
   useEnhancedEffect(() => {
@@ -192,6 +225,7 @@ const MenuItem = React.forwardRef(function MenuItem(inProps, ref) {
         tabIndex={tabIndex}
         component={component}
         focusVisibleClassName={clsx(classes.focusVisible, focusVisibleClassName)}
+        className={clsx(classes.root, className)}
         {...other}
         ownerState={ownerState}
         classes={classes}
@@ -201,10 +235,10 @@ const MenuItem = React.forwardRef(function MenuItem(inProps, ref) {
 });
 
 MenuItem.propTypes /* remove-proptypes */ = {
-  // ----------------------------- Warning --------------------------------
-  // | These PropTypes are generated from the TypeScript type definitions |
-  // |     To update them edit the d.ts file and run "yarn proptypes"     |
-  // ----------------------------------------------------------------------
+  // ┌────────────────────────────── Warning ──────────────────────────────┐
+  // │ These PropTypes are generated from the TypeScript type definitions. │
+  // │    To update them, edit the d.ts file and run `pnpm proptypes`.     │
+  // └─────────────────────────────────────────────────────────────────────┘
   /**
    * If `true`, the list item is focused during the first mount.
    * Focus will also be triggered if the value changes from false to true.
@@ -219,6 +253,10 @@ MenuItem.propTypes /* remove-proptypes */ = {
    * Override or extend the styles applied to the component.
    */
   classes: PropTypes.object,
+  /**
+   * @ignore
+   */
+  className: PropTypes.string,
   /**
    * The component used for the root node.
    * Either a string to use a HTML element or a component.
@@ -248,7 +286,7 @@ MenuItem.propTypes /* remove-proptypes */ = {
    * This prop can help identify which element has keyboard focus.
    * The class name will be applied when the element gains the focus through keyboard interaction.
    * It's a polyfill for the [CSS :focus-visible selector](https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo).
-   * The rationale for using this feature [is explained here](https://github.com/WICG/focus-visible/blob/master/explainer.md).
+   * The rationale for using this feature [is explained here](https://github.com/WICG/focus-visible/blob/HEAD/explainer.md).
    * A [polyfill can be used](https://github.com/WICG/focus-visible) to apply a `focus-visible` class to other components
    * if needed.
    */
@@ -258,13 +296,18 @@ MenuItem.propTypes /* remove-proptypes */ = {
    */
   role: PropTypes /* @typescript-to-proptypes-ignore */.string,
   /**
-   * @ignore
+   * If `true`, the component is selected.
+   * @default false
    */
   selected: PropTypes.bool,
   /**
    * The system prop that allows defining system overrides as well as additional CSS styles.
    */
-  sx: PropTypes.object,
+  sx: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.func, PropTypes.object, PropTypes.bool])),
+    PropTypes.func,
+    PropTypes.object,
+  ]),
   /**
    * @default 0
    */

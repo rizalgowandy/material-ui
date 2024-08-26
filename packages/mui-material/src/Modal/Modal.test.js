@@ -1,22 +1,16 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { expect } from 'chai';
-import { useFakeTimers, spy } from 'sinon';
+import { spy } from 'sinon';
 import PropTypes from 'prop-types';
-import {
-  act,
-  createClientRender,
-  fireEvent,
-  within,
-  describeConformance,
-  screen,
-} from 'test/utils';
+import { act, createRenderer, fireEvent, within, screen } from '@mui/internal-test-utils';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Fade from '@mui/material/Fade';
 import Modal, { modalClasses as classes } from '@mui/material/Modal';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Modal />', () => {
-  const render = createClientRender();
+  const { clock, render } = createRenderer();
 
   let savedBodyStyle;
 
@@ -39,12 +33,16 @@ describe('<Modal />', () => {
       muiName: 'MuiModal',
       refInstanceof: window.HTMLDivElement,
       testVariantProps: { hideBackdrop: true },
+      testLegacyComponentsProp: true,
+      slots: {
+        root: { expectedClassName: classes.root },
+        backdrop: {},
+      },
       skip: [
-        'rootClass', // portal, can't determin the root
+        'rootClass', // portal, can't determine the root
         'componentsProp', // TODO isRTL is leaking, why do we even have it in the first place?
-        'themeDefaultProps', // portal, can't determin the root
-        'themeStyleOverrides', // portal, can't determin the root
-        'reactTestRenderer', // portal https://github.com/facebook/react/issues/11565
+        'themeDefaultProps', // portal, can't determine the root
+        'themeStyleOverrides', // portal, can't determine the root
       ],
     }),
   );
@@ -72,6 +70,19 @@ describe('<Modal />', () => {
       );
 
       expect(container).to.have.text('Hello World');
+    });
+  });
+
+  describe('prop: classes', () => {
+    it('adds custom classes to the component', () => {
+      const { getByTestId } = render(
+        <Modal data-testid="Portal" open classes={{ root: 'custom-root', hidden: 'custom-hidden' }}>
+          <div />
+        </Modal>,
+      );
+      expect(getByTestId('Portal')).to.have.class(classes.root);
+      expect(getByTestId('Portal')).to.have.class('custom-root');
+      expect(getByTestId('Portal')).not.to.have.class('custom-hidden');
     });
   });
 
@@ -120,7 +131,7 @@ describe('<Modal />', () => {
       }
 
       render(
-        <Modal open BackdropComponent={TestBackdrop}>
+        <Modal open slots={{ backdrop: TestBackdrop }}>
           <div />
         </Modal>,
       );
@@ -153,7 +164,15 @@ describe('<Modal />', () => {
         return <div data-testid="backdrop" data-timeout={transitionDuration} />;
       }
       render(
-        <Modal open BackdropComponent={TestBackdrop} BackdropProps={{ transitionDuration: 200 }}>
+        <Modal
+          open
+          slots={{ backdrop: TestBackdrop }}
+          slotProps={{
+            backdrop: {
+              transitionDuration: 200,
+            },
+          }}
+        >
           <div />
         </Modal>,
       );
@@ -164,7 +183,15 @@ describe('<Modal />', () => {
     it('should attach a handler to the backdrop that fires onClose', () => {
       const onClose = spy();
       const { getByTestId } = render(
-        <Modal onClose={onClose} open BackdropProps={{ 'data-testid': 'backdrop' }}>
+        <Modal
+          onClose={onClose}
+          open
+          slotProps={{
+            backdrop: {
+              'data-testid': 'backdrop',
+            },
+          }}
+        >
           <div />
         </Modal>,
       );
@@ -208,7 +235,15 @@ describe('<Modal />', () => {
     it('should call through to the user specified onBackdropClick callback', () => {
       const onBackdropClick = spy();
       const { getByTestId } = render(
-        <Modal onBackdropClick={onBackdropClick} open BackdropProps={{ 'data-testid': 'backdrop' }}>
+        <Modal
+          onClose={(event, reason) => {
+            if (reason === 'backdropClick') {
+              onBackdropClick();
+            }
+          }}
+          open
+          slotProps={{ backdrop: { 'data-testid': 'backdrop' } }}
+        >
           <div />
         </Modal>,
       );
@@ -220,15 +255,24 @@ describe('<Modal />', () => {
 
     it('should ignore the backdrop click if the event did not come from the backdrop', () => {
       function CustomBackdrop(props) {
+        const { ownerState, ...other } = props;
         return (
-          <div {...props}>
+          <div {...other}>
             <span data-testid="inner" />
           </div>
         );
       }
       const onBackdropClick = spy();
       const { getByTestId } = render(
-        <Modal onBackdropClick={onBackdropClick} open BackdropComponent={CustomBackdrop}>
+        <Modal
+          onClose={(event, reason) => {
+            if (reason === 'backdropClick') {
+              onBackdropClick();
+            }
+          }}
+          open
+          slots={{ backdrop: CustomBackdrop }}
+        >
           <div />
         </Modal>,
       );
@@ -358,7 +402,7 @@ describe('<Modal />', () => {
       expect(modalNode).not.toBeAriaHidden();
     });
 
-    // Test case for https://github.com/mui-org/material-ui/issues/15180
+    // Test case for https://github.com/mui/material-ui/issues/15180
     // TODO: how does this relate to `keepMounted`
     // TODO: never finishes
     it('should remove the transition children in the DOM when closed whilst transition status is entering', () => {
@@ -473,16 +517,8 @@ describe('<Modal />', () => {
       expect(initialFocus).toHaveFocus();
     });
 
-    describe('', () => {
-      let clock;
-
-      beforeEach(() => {
-        clock = useFakeTimers();
-      });
-
-      afterEach(() => {
-        clock.restore();
-      });
+    describe('focus stealing', () => {
+      clock.withFakeTimers();
 
       it('does not steal focus from other frames', function test() {
         if (/jsdom/.test(window.navigator.userAgent)) {
@@ -541,16 +577,18 @@ describe('<Modal />', () => {
         act(() => {
           getByTestId('foreign-input').focus();
         });
-        act(() => {
-          // wait for the `contain` interval check to kick in.
-          clock.tick(500);
-        });
+        // wait for the `contain` interval check to kick in.
+        clock.tick(500);
 
         expect(getByTestId('foreign-input')).toHaveFocus();
       });
+    });
 
-      // Test case for https://github.com/mui-org/material-ui/issues/12831
-      it('should unmount the children when starting open and closing immediately', () => {
+    describe('when starting open and closing immediately', () => {
+      clock.withFakeTimers();
+
+      // Test case for https://github.com/mui/material-ui/issues/12831
+      it('should unmount the children ', () => {
         const timeout = 50;
         function TestCase() {
           const [open, setOpen] = React.useState(true);
@@ -569,37 +607,28 @@ describe('<Modal />', () => {
         }
         render(<TestCase />);
         // exit transition started
-        act(() => {
-          clock.tick(timeout);
-        });
+        clock.tick(timeout);
         expect(document.querySelector('#modal-body')).to.equal(null);
       });
     });
   });
 
   describe('two modal at the same time', () => {
-    /**
-     * @type {ReturnType<typeof useFakeTimers>}
-     */
-    let clock;
-    beforeEach(() => {
-      clock = useFakeTimers();
-    });
-    afterEach(() => {
-      clock.restore();
-    });
+    clock.withFakeTimers();
 
     it('should open and close', () => {
-      const TestCase = (props) => (
-        <React.Fragment>
-          <Modal open={props.open}>
-            <div>Hello</div>
-          </Modal>
-          <Modal open={props.open}>
-            <div>World</div>
-          </Modal>
-        </React.Fragment>
-      );
+      function TestCase(props) {
+        return (
+          <React.Fragment>
+            <Modal open={props.open}>
+              <div>Hello</div>
+            </Modal>
+            <Modal open={props.open}>
+              <div>World</div>
+            </Modal>
+          </React.Fragment>
+        );
+      }
       TestCase.propTypes = {
         open: PropTypes.bool,
       };
@@ -618,18 +647,20 @@ describe('<Modal />', () => {
     });
 
     it('should open and close with Transitions', () => {
-      const TestCase = (props) => (
-        <React.Fragment>
-          <Modal open={props.open}>
-            <Fade onEntered={props.onEntered} onExited={props.onExited} in={props.open}>
-              <div>Hello</div>
-            </Fade>
-          </Modal>
-          <Modal open={props.open}>
-            <div>World</div>
-          </Modal>
-        </React.Fragment>
-      );
+      function TestCase(props) {
+        return (
+          <React.Fragment>
+            <Modal open={props.open}>
+              <Fade onEntered={props.onEntered} onExited={props.onExited} in={props.open}>
+                <div>Hello</div>
+              </Fade>
+            </Modal>
+            <Modal open={props.open}>
+              <div>World</div>
+            </Modal>
+          </React.Fragment>
+        );
+      }
 
       const handleEntered = spy();
       const handleExited = spy();
@@ -640,18 +671,14 @@ describe('<Modal />', () => {
       expect(document.body.style).to.have.property('overflow', '');
 
       setProps({ open: true });
-      act(() => {
-        clock.runToLast();
-      });
+      clock.runToLast();
 
       expect(handleEntered.callCount).to.equal(1);
       expect(handleExited.callCount).to.equal(0);
       expect(document.body.style).to.have.property('overflow', 'hidden');
 
       setProps({ open: false });
-      act(() => {
-        clock.runToLast();
-      });
+      clock.runToLast();
 
       expect(handleEntered.callCount).to.equal(1);
       expect(handleExited.callCount).to.equal(1);
@@ -683,30 +710,23 @@ describe('<Modal />', () => {
   });
 
   describe('prop: closeAfterTransition', () => {
-    /**
-     * @type {ReturnType<typeof useFakeTimers>}
-     */
-    let clock;
-    beforeEach(() => {
-      clock = useFakeTimers();
-    });
-    afterEach(() => {
-      clock.restore();
-    });
+    clock.withFakeTimers();
 
     it('when true it should close after Transition has finished', () => {
-      const TestCase = (props) => (
-        <Modal open={props.open} closeAfterTransition>
-          <Fade
-            onEntered={props.onEntered}
-            onExiting={props.onExiting}
-            onExited={props.onExited}
-            in={props.open}
-          >
-            <div>Hello</div>
-          </Fade>
-        </Modal>
-      );
+      function TestCase(props) {
+        return (
+          <Modal open={props.open} closeAfterTransition>
+            <Fade
+              onEntered={props.onEntered}
+              onExiting={props.onExiting}
+              onExited={props.onExited}
+              in={props.open}
+            >
+              <div>Hello</div>
+            </Fade>
+          </Modal>
+        );
+      }
       const handleEntered = spy();
       const handleExiting = spy();
       const handleExited = spy();
@@ -726,9 +746,7 @@ describe('<Modal />', () => {
       expect(document.body.style).to.have.property('overflow', '');
 
       setProps({ open: true });
-      act(() => {
-        clock.runToLast();
-      });
+      clock.runToLast();
 
       expect(handleEntered.callCount).to.equal(1);
       expect(handleExiting.callCount).to.equal(0);
@@ -753,18 +771,20 @@ describe('<Modal />', () => {
     });
 
     it('when false it should close before Transition has finished', () => {
-      const TestCase = (props) => (
-        <Modal open={props.open} closeAfterTransition={false}>
-          <Fade
-            onEntered={props.onEntered}
-            onExiting={props.onExiting}
-            onExited={props.onExited}
-            in={props.open}
-          >
-            <div>Hello</div>
-          </Fade>
-        </Modal>
-      );
+      function TestCase(props) {
+        return (
+          <Modal open={props.open} closeAfterTransition={false}>
+            <Fade
+              onEntered={props.onEntered}
+              onExiting={props.onExiting}
+              onExited={props.onExited}
+              in={props.open}
+            >
+              <div>Hello</div>
+            </Fade>
+          </Modal>
+        );
+      }
       const handleEntered = spy();
       const handleExiting = spy();
       const handleExited = spy();
@@ -784,9 +804,7 @@ describe('<Modal />', () => {
       expect(document.body.style).to.have.property('overflow', '');
 
       setProps({ open: true });
-      act(() => {
-        clock.runToLast();
-      });
+      clock.runToLast();
 
       expect(handleEntered.callCount).to.equal(1);
       expect(handleExiting.callCount).to.equal(0);
@@ -800,9 +818,7 @@ describe('<Modal />', () => {
       expect(handleExited.callCount).to.equal(0);
       expect(document.body.style).to.have.property('overflow', '');
 
-      act(() => {
-        clock.runToLast();
-      });
+      clock.runToLast();
 
       expect(handleEntered.callCount).to.equal(1);
       expect(handleExiting.callCount).to.equal(1);
@@ -842,5 +858,26 @@ describe('<Modal />', () => {
       );
       expect(within(getByTestId('parent')).getByTestId('child')).not.to.equal(null);
     });
+  });
+
+  describe('prop: BackdropProps', () => {
+    it('should handle custom className', () => {
+      const { getByTestId } = render(
+        <Modal open BackdropProps={{ className: 'custom-backdrop', 'data-testid': 'backdrop' }}>
+          <div />
+        </Modal>,
+      );
+      expect(getByTestId('backdrop')).to.have.class('custom-backdrop');
+    });
+  });
+
+  it('should not warn when onTransitionEnter and onTransitionExited are provided', () => {
+    expect(() => {
+      render(
+        <Modal open onTransitionEnter={() => {}} onTransitionExited={() => {}}>
+          <div />
+        </Modal>,
+      );
+    }).not.toErrorDev();
   });
 });

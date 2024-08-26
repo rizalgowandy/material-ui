@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { describeConformance, createClientRender } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import DialogContent, { dialogContentClasses as classes } from '@mui/material/DialogContent';
+import describeConformance from '../../test/describeConformance';
 
 describe('<DialogContent />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<DialogContent />, () => ({
     classes,

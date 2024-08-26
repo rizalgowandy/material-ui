@@ -1,27 +1,21 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { expect } from 'chai';
-import { spy, useFakeTimers } from 'sinon';
-import { act, createClientRender, fireEvent, fireDiscreteEvent, screen } from 'test/utils';
-import Portal from '../Portal';
-import ClickAwayListener from './ClickAwayListener';
+import { spy } from 'sinon';
+import {
+  act,
+  createRenderer,
+  fireEvent,
+  fireDiscreteEvent,
+  screen,
+} from '@mui/internal-test-utils';
+import Portal from '@mui/material/Portal';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 
 describe('<ClickAwayListener />', () => {
+  const { render: clientRender, clock } = createRenderer({ clock: 'fake' });
   /**
-   * @type {ReturnType<typeof useFakeTimers>}
-   */
-  let clock;
-  beforeEach(() => {
-    clock = useFakeTimers();
-  });
-
-  afterEach(() => {
-    clock.restore();
-  });
-
-  const clientRender = createClientRender();
-  /**
-   * @type  {typeof plainRender extends (...args: infer T) => any ? T : enver} args
+   * @type  {typeof plainRender extends (...args: infer T) => any ? T : never} args
    *
    * @remarks
    * This is for all intents and purposes the same as our client render method.
@@ -272,7 +266,7 @@ describe('<ClickAwayListener />', () => {
       expect(handleClickAway.callCount).to.equal(0);
     });
 
-    it('should call `props.onClickAway` when the appropriate mouse event is triggered', () => {
+    it('should call `props.onClickAway` when mouse down is triggered', () => {
       const handleClickAway = spy();
       render(
         <ClickAwayListener onClickAway={handleClickAway} mouseEvent="onMouseDown">
@@ -282,6 +276,48 @@ describe('<ClickAwayListener />', () => {
       fireEvent.mouseUp(document.body);
       expect(handleClickAway.callCount).to.equal(0);
       fireEvent.mouseDown(document.body);
+      expect(handleClickAway.callCount).to.equal(1);
+      expect(handleClickAway.args[0].length).to.equal(1);
+    });
+
+    it('should call `props.onClickAway` when mouse up is triggered', () => {
+      const handleClickAway = spy();
+      render(
+        <ClickAwayListener onClickAway={handleClickAway} mouseEvent="onMouseUp">
+          <span />
+        </ClickAwayListener>,
+      );
+      fireEvent.mouseDown(document.body);
+      expect(handleClickAway.callCount).to.equal(0);
+      fireEvent.mouseUp(document.body);
+      expect(handleClickAway.callCount).to.equal(1);
+      expect(handleClickAway.args[0].length).to.equal(1);
+    });
+
+    it('should call `props.onClickAway` when pointer down is triggered', () => {
+      const handleClickAway = spy();
+      render(
+        <ClickAwayListener onClickAway={handleClickAway} mouseEvent="onPointerDown">
+          <span />
+        </ClickAwayListener>,
+      );
+      fireEvent.pointerUp(document.body);
+      expect(handleClickAway.callCount).to.equal(0);
+      fireEvent.pointerDown(document.body);
+      expect(handleClickAway.callCount).to.equal(1);
+      expect(handleClickAway.args[0].length).to.equal(1);
+    });
+
+    it('should call `props.onClickAway` when pointer up is triggered', () => {
+      const handleClickAway = spy();
+      render(
+        <ClickAwayListener onClickAway={handleClickAway} mouseEvent="onPointerUp">
+          <span />
+        </ClickAwayListener>,
+      );
+      fireEvent.pointerDown(document.body);
+      expect(handleClickAway.callCount).to.equal(0);
+      fireEvent.pointerUp(document.body);
       expect(handleClickAway.callCount).to.equal(1);
       expect(handleClickAway.args[0].length).to.equal(1);
     });

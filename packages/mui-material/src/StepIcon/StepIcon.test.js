@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { expect } from 'chai';
-import { describeConformance, createClientRender } from 'test/utils';
+import { createRenderer } from '@mui/internal-test-utils';
 import StepIcon, { stepIconClasses as classes } from '@mui/material/StepIcon';
+import describeConformance from '../../test/describeConformance';
 
 describe('<StepIcon />', () => {
-  const render = createClientRender();
+  const { render } = createRenderer();
 
   describeConformance(<StepIcon icon={1} />, () => ({
     classes,

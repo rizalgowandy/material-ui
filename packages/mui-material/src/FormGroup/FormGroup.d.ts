@@ -30,11 +30,11 @@ export interface FormGroupProps extends StandardProps<React.HTMLAttributes<HTMLD
  *
  * Demos:
  *
- * - [Checkboxes](https://material-ui.com/components/checkboxes/)
- * - [Switches](https://material-ui.com/components/switches/)
+ * - [Checkbox](https://next.mui.com/material-ui/react-checkbox/)
+ * - [Switch](https://next.mui.com/material-ui/react-switch/)
  *
  * API:
  *
- * - [FormGroup API](https://material-ui.com/api/form-group/)
+ * - [FormGroup API](https://next.mui.com/material-ui/api/form-group/)
  */
-export default function FormGroup(props: FormGroupProps): JSX.Element;
+export default function FormGroup(props: FormGroupProps): React.JSX.Element;

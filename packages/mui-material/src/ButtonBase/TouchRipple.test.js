@@ -1,13 +1,13 @@
 import * as React from 'react';
-import { useFakeTimers } from 'sinon';
 import { expect } from 'chai';
-import { describeConformance, act, createClientRender } from 'test/utils';
+import { act, createRenderer } from '@mui/internal-test-utils';
 import TouchRipple, { DELAY_RIPPLE } from './TouchRipple';
+import describeConformance from '../../test/describeConformance';
 
 const cb = () => {};
 
 describe('<TouchRipple />', () => {
-  const render = createClientRender();
+  const { clock, render } = createRenderer();
 
   /**
    * @param {object} other props to spread to TouchRipple
@@ -176,18 +176,7 @@ describe('<TouchRipple />', () => {
   });
 
   describe('mobile', () => {
-    /**
-     * @type {ReturnType<typeof useFakeTimers>}
-     */
-    let clock;
-
-    beforeEach(() => {
-      clock = useFakeTimers();
-    });
-
-    afterEach(() => {
-      clock.restore();
-    });
+    clock.withFakeTimers();
 
     it('should delay the display of the ripples', () => {
       const { instance, queryAllActiveRipples, queryAllStoppingRipples } = renderTouchRipple();
@@ -202,15 +191,13 @@ describe('<TouchRipple />', () => {
       expect(queryAllActiveRipples()).to.have.lengthOf(0);
       expect(queryAllStoppingRipples()).to.have.lengthOf(0);
 
-      act(() => {
-        clock.tick(DELAY_RIPPLE);
-      });
+      clock.tick(DELAY_RIPPLE);
 
       expect(queryAllActiveRipples()).to.have.lengthOf(1);
       expect(queryAllStoppingRipples()).to.have.lengthOf(0);
 
+      clock.tick(DELAY_RIPPLE);
       act(() => {
-        clock.tick(DELAY_RIPPLE);
         instance.stop({ type: 'touchend' }, cb);
       });
 
@@ -231,9 +218,7 @@ describe('<TouchRipple />', () => {
       expect(queryAllActiveRipples()).to.have.lengthOf(0);
       expect(queryAllStoppingRipples()).to.have.lengthOf(0);
 
-      act(() => {
-        clock.tick(DELAY_RIPPLE / 2);
-      });
+      clock.tick(DELAY_RIPPLE / 2);
 
       expect(queryAllActiveRipples()).to.have.lengthOf(0);
       expect(queryAllStoppingRipples()).to.have.lengthOf(0);
@@ -245,9 +230,7 @@ describe('<TouchRipple />', () => {
       expect(queryAllActiveRipples()).to.have.lengthOf(1);
       expect(queryAllStoppingRipples()).to.have.lengthOf(0);
 
-      act(() => {
-        clock.tick(1);
-      });
+      clock.tick(1);
 
       expect(queryAllActiveRipples()).to.have.lengthOf(0);
       expect(queryAllStoppingRipples()).to.have.lengthOf(1);
@@ -283,6 +266,12 @@ describe('<TouchRipple />', () => {
       // expect this to run gracefully without
       // "react state update on an unmounted component"
       clock.runAll();
+    });
+
+    it('should handle empty event.touches', () => {
+      const { instance } = renderTouchRipple();
+
+      expect(() => instance.start({ type: 'touchstart', touches: [] })).not.toErrorDev();
     });
   });
 });

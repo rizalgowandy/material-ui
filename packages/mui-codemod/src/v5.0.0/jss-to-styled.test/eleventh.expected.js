@@ -1,5 +1,5 @@
-import React from 'react';
-import { styled } from '@material-ui/core/styles';
+import * as React from 'react';
+import { styled } from '@mui/material/styles';
 import SomeNamespace from 'SomeNamespace';
 const PREFIX = 'eleventh';
 
@@ -29,9 +29,9 @@ export default function Page() {
 
 
   return (
-    <StyledSomeNamespaceSomeComponent>
+    (<StyledSomeNamespaceSomeComponent>
       <h1 className={classes.header}></h1>
       <img className={classes.img}></img>
-    </StyledSomeNamespaceSomeComponent>
+    </StyledSomeNamespaceSomeComponent>)
   );
 }

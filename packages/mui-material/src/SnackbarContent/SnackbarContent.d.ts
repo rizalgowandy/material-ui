@@ -33,11 +33,11 @@ export interface SnackbarContentProps extends StandardProps<PaperProps, 'childre
  *
  * Demos:
  *
- * - [Snackbars](https://material-ui.com/components/snackbars/)
+ * - [Snackbar](https://next.mui.com/material-ui/react-snackbar/)
  *
  * API:
  *
- * - [SnackbarContent API](https://material-ui.com/api/snackbar-content/)
- * - inherits [Paper API](https://material-ui.com/api/paper/)
+ * - [SnackbarContent API](https://next.mui.com/material-ui/api/snackbar-content/)
+ * - inherits [Paper API](https://next.mui.com/material-ui/api/paper/)
  */
-export default function SnackbarContent(props: SnackbarContentProps): JSX.Element;
+export default function SnackbarContent(props: SnackbarContentProps): React.JSX.Element;
