@@ -1,16 +1,19 @@
+'use client';
 import * as React from 'react';
 import { isFragment } from 'react-is';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
-import { unstable_composeClasses as composeClasses } from '@mui/base';
-import { HTMLElementType } from '@mui/utils';
+import composeClasses from '@mui/utils/composeClasses';
+import HTMLElementType from '@mui/utils/HTMLElementType';
+import { useRtl } from '@mui/system/RtlProvider';
+import useSlotProps from '@mui/utils/useSlotProps';
 import MenuList from '../MenuList';
-import Paper from '../Paper';
-import Popover from '../Popover';
-import styled, { rootShouldForwardProp } from '../styles/styled';
-import useTheme from '../styles/useTheme';
-import useThemeProps from '../styles/useThemeProps';
+import Popover, { PopoverPaper } from '../Popover';
+import rootShouldForwardProp from '../styles/rootShouldForwardProp';
+import { styled } from '../zero-styled';
+import { useDefaultProps } from '../DefaultPropsProvider';
 import { getMenuUtilityClass } from './menuClasses';
+import useSlot from '../utils/useSlot';
 
 const RTL_ORIGIN = {
   vertical: 'top',
@@ -41,13 +44,13 @@ const MenuRoot = styled(Popover, {
   overridesResolver: (props, styles) => styles.root,
 })({});
 
-const MenuPaper = styled(Paper, {
+export const MenuPaper = styled(PopoverPaper, {
   name: 'MuiMenu',
   slot: 'Paper',
   overridesResolver: (props, styles) => styles.paper,
 })({
   // specZ: The maximum height of a simple menu should be one or more rows less than the view
-  // height. This ensures a tapable area outside of the simple menu with which to dismiss
+  // height. This ensures a tappable area outside of the simple menu with which to dismiss
   // the menu.
   maxHeight: 'calc(100% - 96px)',
   // Add iOS momentum scrolling for iOS < 13.0
@@ -64,11 +67,12 @@ const MenuMenuList = styled(MenuList, {
 });
 
 const Menu = React.forwardRef(function Menu(inProps, ref) {
-  const props = useThemeProps({ props: inProps, name: 'MuiMenu' });
+  const props = useDefaultProps({ props: inProps, name: 'MuiMenu' });
 
   const {
     autoFocus = true,
     children,
+    className,
     disableAutoFocusItem = false,
     MenuListProps = {},
     onClose,
@@ -78,11 +82,12 @@ const Menu = React.forwardRef(function Menu(inProps, ref) {
     transitionDuration = 'auto',
     TransitionProps: { onEntering, ...TransitionProps } = {},
     variant = 'selectedMenu',
+    slots = {},
+    slotProps = {},
     ...other
   } = props;
 
-  const theme = useTheme();
-  const isRtl = theme.direction === 'rtl';
+  const isRtl = useRtl();
 
   const ownerState = {
     ...props,
@@ -104,7 +109,9 @@ const Menu = React.forwardRef(function Menu(inProps, ref) {
 
   const handleEntering = (element, isAppearing) => {
     if (menuListActionsRef.current) {
-      menuListActionsRef.current.adjustStyleForScrollbar(element, theme);
+      menuListActionsRef.current.adjustStyleForScrollbar(element, {
+        direction: isRtl ? 'rtl' : 'ltr',
+      });
     }
 
     if (onEntering) {
@@ -156,51 +163,108 @@ const Menu = React.forwardRef(function Menu(inProps, ref) {
     }
   });
 
+  const externalForwardedProps = {
+    slots,
+    slotProps: {
+      list: MenuListProps,
+      transition: TransitionProps,
+      paper: PaperProps,
+      ...slotProps,
+    },
+  };
+
+  const rootSlotProps = useSlotProps({
+    elementType: slots.root,
+    externalSlotProps: slotProps.root,
+    ownerState,
+    className: [classes.root, className],
+  });
+
+  const [PaperSlot, paperSlotProps] = useSlot('paper', {
+    className: classes.paper,
+    elementType: MenuPaper,
+    externalForwardedProps,
+    shouldForwardComponentProp: true,
+    ownerState,
+  });
+
+  const [ListSlot, listSlotProps] = useSlot('list', {
+    className: clsx(classes.list, MenuListProps.className),
+    elementType: MenuMenuList,
+    shouldForwardComponentProp: true,
+    externalForwardedProps,
+    getSlotProps: (handlers) => ({
+      ...handlers,
+      onKeyDown: (event) => {
+        handleListKeyDown(event);
+        handlers.onKeyDown?.(event);
+      },
+    }),
+    ownerState,
+  });
+
+  const resolvedTransitionProps =
+    typeof externalForwardedProps.slotProps.transition === 'function'
+      ? externalForwardedProps.slotProps.transition(ownerState)
+      : externalForwardedProps.slotProps.transition;
+
   return (
     <MenuRoot
-      classes={PopoverClasses}
       onClose={onClose}
       anchorOrigin={{
         vertical: 'bottom',
         horizontal: isRtl ? 'right' : 'left',
       }}
       transformOrigin={isRtl ? RTL_ORIGIN : LTR_ORIGIN}
-      PaperProps={{
-        component: MenuPaper,
-        ...PaperProps,
-        classes: {
-          ...PaperProps.classes,
-          root: classes.paper,
+      slots={{
+        root: slots.root,
+        paper: PaperSlot,
+        backdrop: slots.backdrop,
+        ...(slots.transition && {
+          // TODO: pass `slots.transition` directly once `TransitionComponent` is removed from Popover
+          transition: slots.transition,
+        }),
+      }}
+      slotProps={{
+        root: rootSlotProps,
+        paper: paperSlotProps,
+        backdrop:
+          typeof slotProps.backdrop === 'function'
+            ? slotProps.backdrop(ownerState)
+            : slotProps.backdrop,
+        transition: {
+          ...resolvedTransitionProps,
+          onEntering: (...args) => {
+            handleEntering(...args);
+            resolvedTransitionProps?.onEntering?.(...args);
+          },
         },
       }}
-      className={classes.root}
       open={open}
       ref={ref}
       transitionDuration={transitionDuration}
-      TransitionProps={{ onEntering: handleEntering, ...TransitionProps }}
       ownerState={ownerState}
       {...other}
+      classes={PopoverClasses}
     >
-      <MenuMenuList
-        onKeyDown={handleListKeyDown}
+      <ListSlot
         actions={menuListActionsRef}
         autoFocus={autoFocus && (activeItemIndex === -1 || disableAutoFocusItem)}
         autoFocusItem={autoFocusItem}
         variant={variant}
-        {...MenuListProps}
-        className={clsx(classes.list, MenuListProps.className)}
+        {...listSlotProps}
       >
         {children}
-      </MenuMenuList>
+      </ListSlot>
     </MenuRoot>
   );
 });
 
 Menu.propTypes /* remove-proptypes */ = {
-  // ----------------------------- Warning --------------------------------
-  // | These PropTypes are generated from the TypeScript type definitions |
-  // |     To update them edit the d.ts file and run "yarn proptypes"     |
-  // ----------------------------------------------------------------------
+  // ┌────────────────────────────── Warning ──────────────────────────────┐
+  // │ These PropTypes are generated from the TypeScript type definitions. │
+  // │    To update them, edit the d.ts file and run `pnpm proptypes`.     │
+  // └─────────────────────────────────────────────────────────────────────┘
   /**
    * An HTML element, or a function that returns one.
    * It's used to set the position of the menu.
@@ -226,6 +290,10 @@ Menu.propTypes /* remove-proptypes */ = {
    */
   classes: PropTypes.object,
   /**
+   * @ignore
+   */
+  className: PropTypes.string,
+  /**
    * When opening the menu will not focus the active item but the `[role="menu"]`
    * unless `autoFocus` is also set to `false`. Not using the default means not
    * following WAI-ARIA authoring practices. Please be considerate about possible
@@ -234,7 +302,8 @@ Menu.propTypes /* remove-proptypes */ = {
    */
   disableAutoFocusItem: PropTypes.bool,
   /**
-   * Props applied to the [`MenuList`](/api/menu-list/) element.
+   * Props applied to the [`MenuList`](https://mui.com/material-ui/api/menu-list/) element.
+   * @deprecated use the `slotProps.list` prop instead. This prop will be removed in v7. See [Migrating from deprecated APIs](https://mui.com/material-ui/migration/migrating-from-deprecated-apis/) for more details.
    * @default {}
    */
   MenuListProps: PropTypes.object,
@@ -254,14 +323,36 @@ Menu.propTypes /* remove-proptypes */ = {
    */
   PaperProps: PropTypes.object,
   /**
-   * `classes` prop applied to the [`Popover`](/api/popover/) element.
+   * `classes` prop applied to the [`Popover`](https://mui.com/material-ui/api/popover/) element.
    */
   PopoverClasses: PropTypes.object,
+  /**
+   * The props used for each slot inside.
+   * @default {}
+   */
+  slotProps: PropTypes.shape({
+    backdrop: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
+    list: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
+    paper: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
+    root: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
+    transition: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
+  }),
+  /**
+   * The components used for each slot inside.
+   * @default {}
+   */
+  slots: PropTypes.shape({
+    backdrop: PropTypes.elementType,
+    list: PropTypes.elementType,
+    paper: PropTypes.elementType,
+    root: PropTypes.elementType,
+    transition: PropTypes.elementType,
+  }),
   /**
    * The system prop that allows defining system overrides as well as additional CSS styles.
    */
   sx: PropTypes.oneOfType([
-    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.func, PropTypes.object])),
+    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.func, PropTypes.object, PropTypes.bool])),
     PropTypes.func,
     PropTypes.object,
   ]),
@@ -280,7 +371,8 @@ Menu.propTypes /* remove-proptypes */ = {
   ]),
   /**
    * Props applied to the transition element.
-   * By default, the element is based on this [`Transition`](https://reactcommunity.org/react-transition-group/transition) component.
+   * By default, the element is based on this [`Transition`](https://reactcommunity.org/react-transition-group/transition/) component.
+   * @deprecated use the `slotProps.transition` prop instead. This prop will be removed in v7. See [Migrating from deprecated APIs](https://mui.com/material-ui/migration/migrating-from-deprecated-apis/) for more details.
    * @default {}
    */
   TransitionProps: PropTypes.object,

@@ -2,15 +2,17 @@ import * as React from 'react';
 import { expect } from 'chai';
 import { spy } from 'sinon';
 import PropTypes from 'prop-types';
-import { describeConformance, act, createRenderer, fireEvent, screen } from 'test/utils';
+import { act, createRenderer, fireEvent, screen } from '@mui/internal-test-utils';
 import FormGroup from '@mui/material/FormGroup';
 import Radio from '@mui/material/Radio';
-import RadioGroup, { useRadioGroup } from '@mui/material/RadioGroup';
+import RadioGroup, { useRadioGroup, radioGroupClasses as classes } from '@mui/material/RadioGroup';
+import describeConformance from '../../test/describeConformance';
 
 describe('<RadioGroup />', () => {
   const { render } = createRenderer();
 
   describeConformance(<RadioGroup value="" />, () => ({
+    render,
     classes: {},
     inheritComponent: FormGroup,
     refInstanceof: window.HTMLDivElement,
@@ -91,10 +93,11 @@ describe('<RadioGroup />', () => {
       </RadioGroup>,
     );
 
-    const radios = getAllByRole('radio');
-
-    expect(radios[0].name).to.match(/^mui-[0-9]+/);
-    expect(radios[1].name).to.match(/^mui-[0-9]+/);
+    const [arbitraryRadio, ...radios] = getAllByRole('radio');
+    // `name` **property** will always be a string even if the **attribute** is omitted
+    expect(arbitraryRadio.name).not.to.equal('');
+    // all input[type="radio"] have the same name
+    expect(new Set(radios.map((radio) => radio.name))).to.have.length(1);
   });
 
   it('should support number value', () => {
@@ -117,7 +120,7 @@ describe('<RadioGroup />', () => {
   });
 
   describe('imperative focus()', () => {
-    it('should focus the first non-disabled radio', () => {
+    it('should focus the first non-disabled radio', async () => {
       const actionsRef = React.createRef();
       const oneRadioOnFocus = spy();
 
@@ -129,7 +132,7 @@ describe('<RadioGroup />', () => {
         </RadioGroup>,
       );
 
-      act(() => {
+      await act(async () => {
         actionsRef.current.focus();
       });
 
@@ -159,7 +162,7 @@ describe('<RadioGroup />', () => {
       expect(twoRadioOnFocus.callCount).to.equal(0);
     });
 
-    it('should focus the selected radio', () => {
+    it('should focus the selected radio', async () => {
       const actionsRef = React.createRef();
       const twoRadioOnFocus = spy();
 
@@ -172,14 +175,14 @@ describe('<RadioGroup />', () => {
         </RadioGroup>,
       );
 
-      act(() => {
+      await act(async () => {
         actionsRef.current.focus();
       });
 
       expect(twoRadioOnFocus.callCount).to.equal(1);
     });
 
-    it('should focus the non-disabled radio rather than the disabled selected radio', () => {
+    it('should focus the non-disabled radio rather than the disabled selected radio', async () => {
       const actionsRef = React.createRef();
       const threeRadioOnFocus = spy();
 
@@ -192,7 +195,7 @@ describe('<RadioGroup />', () => {
         </RadioGroup>,
       );
 
-      act(() => {
+      await act(async () => {
         actionsRef.current.focus();
       });
 
@@ -299,21 +302,20 @@ describe('<RadioGroup />', () => {
   });
 
   describe('useRadioGroup', () => {
-    const RadioGroupController = React.forwardRef((_, ref) => {
-      const radioGroup = useRadioGroup();
-      React.useImperativeHandle(ref, () => radioGroup, [radioGroup]);
-      return null;
-    });
-
-    const RadioGroupControlled = React.forwardRef(function RadioGroupControlled(props, ref) {
-      return (
-        <RadioGroup {...props}>
-          <RadioGroupController ref={ref} />
-        </RadioGroup>
-      );
-    });
-
     describe('from props', () => {
+      const MinimalRadio = React.forwardRef(function MinimalRadio(_, ref) {
+        const radioGroup = useRadioGroup();
+        return <input {...radioGroup} ref={ref} type="radio" />;
+      });
+
+      const RadioGroupControlled = React.forwardRef(function RadioGroupControlled(props, ref) {
+        return (
+          <RadioGroup {...props}>
+            <MinimalRadio ref={ref} />
+          </RadioGroup>
+        );
+      });
+
       it('should have the name prop from the instance', () => {
         const radioGroupRef = React.createRef();
         const { setProps } = render(<RadioGroupControlled name="group" ref={radioGroupRef} />);
@@ -338,7 +340,7 @@ describe('<RadioGroup />', () => {
         const radioGroupRef = React.createRef();
         const { setProps } = render(<RadioGroupControlled ref={radioGroupRef} />);
 
-        expect(radioGroupRef.current.name).to.match(/^mui-[0-9]+/);
+        expect(radioGroupRef.current.name).not.to.equal('');
 
         setProps({ name: 'anotherGroup' });
         expect(radioGroupRef.current).to.have.property('name', 'anotherGroup');
@@ -346,6 +348,20 @@ describe('<RadioGroup />', () => {
     });
 
     describe('callbacks', () => {
+      const RadioGroupController = React.forwardRef((_, ref) => {
+        const radioGroup = useRadioGroup();
+        React.useImperativeHandle(ref, () => radioGroup, [radioGroup]);
+        return null;
+      });
+
+      const RadioGroupControlled = React.forwardRef(function RadioGroupControlled(props, ref) {
+        return (
+          <RadioGroup {...props}>
+            <RadioGroupController ref={ref} />
+          </RadioGroup>
+        );
+      });
+
       describe('onChange', () => {
         it('should set the value state', () => {
           const radioGroupRef = React.createRef();
@@ -397,5 +413,19 @@ describe('<RadioGroup />', () => {
         'MUI: A component is changing the uncontrolled value state of RadioGroup to be controlled.',
       );
     });
+  });
+
+  it('should apply the classnames', () => {
+    render(
+      <RadioGroup name="group" row>
+        <Radio value={1} />
+        <Radio value={2} />
+      </RadioGroup>,
+    );
+
+    const radiogroup = screen.getByRole('radiogroup');
+    expect(radiogroup).to.have.class(classes.root);
+    expect(radiogroup).to.have.class(classes.row);
+    expect(radiogroup).not.to.have.class(classes.error);
   });
 });

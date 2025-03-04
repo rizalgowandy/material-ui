@@ -1,4 +1,3 @@
-import MuiError from '@mui/utils/macros/MuiError.macro';
 import { isUnitless, convertLength, responsiveProperty, alignProperty, fontGrid } from './cssUtils';
 
 export default function responsiveFontSizes(themeInput, options = {}) {
@@ -27,13 +26,18 @@ export default function responsiveFontSizes(themeInput, options = {}) {
   theme.typography = { ...theme.typography };
   const typography = theme.typography;
 
-  // Convert between css lengths e.g. em->px or px->rem
+  // Convert between CSS lengths e.g. em->px or px->rem
   // Set the baseFontSize for your project. Defaults to 16px (also the browser default).
   const convert = convertLength(typography.htmlFontSize);
   const breakpointValues = breakpoints.map((x) => theme.breakpoints.values[x]);
 
   variants.forEach((variant) => {
     const style = typography[variant];
+
+    if (!style) {
+      return;
+    }
+
     const remFontSize = parseFloat(convert(style.fontSize, 'rem'));
 
     if (remFontSize <= 1) {
@@ -46,7 +50,7 @@ export default function responsiveFontSizes(themeInput, options = {}) {
     let { lineHeight } = style;
 
     if (!isUnitless(lineHeight) && !disableAlign) {
-      throw new MuiError(
+      throw /* minify-error */ new Error(
         'MUI: Unsupported non-unitless line height with grid alignment.\n' +
           'Use unitless line heights instead.',
       );
