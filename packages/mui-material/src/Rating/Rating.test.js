@@ -1,13 +1,15 @@
 import * as React from 'react';
 import { expect } from 'chai';
 import { stub, spy } from 'sinon';
-import { act, describeConformance, createRenderer, fireEvent, screen } from 'test/utils';
+import { act, createRenderer, fireEvent, screen } from '@mui/internal-test-utils';
 import Rating, { ratingClasses as classes } from '@mui/material/Rating';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import describeConformance from '../../test/describeConformance';
 
 describe('<Rating />', () => {
   const { render } = createRenderer();
 
-  describeConformance(<Rating />, () => ({
+  describeConformance(<Rating max={0} />, () => ({
     classes,
     inheritComponent: 'span',
     render,
@@ -16,7 +18,53 @@ describe('<Rating />', () => {
     testDeepOverrides: { slotName: 'label', slotClassName: classes.label },
     testStateOverrides: { prop: 'size', value: 'small', styleKey: 'sizeSmall' },
     refInstanceof: window.HTMLSpanElement,
-    skip: ['componentProp', 'componentsProp'],
+    slots: {
+      root: {
+        expectedClassName: classes.root,
+      },
+      label: {
+        expectedClassName: classes.label,
+      },
+    },
+    skip: ['componentsProp'],
+  }));
+
+  describeConformance(<Rating max={1} />, () => ({
+    render,
+    refInstanceof: window.HTMLSpanElement,
+    slots: {
+      icon: {
+        expectedClassName: classes.icon,
+      },
+    },
+    only: [
+      'slotsProp',
+      'slotPropsProp',
+      'slotPropsCallback',
+      'slotPropsCallbackWithPropsAsOwnerState',
+    ],
+  }));
+
+  function CustomDecimal({ iconActive, ownerState, ...props }) {
+    return <i data-testid="custom" {...props} />;
+  }
+
+  describeConformance(<Rating max={1} precision={0.5} />, () => ({
+    render,
+    refInstanceof: window.HTMLSpanElement,
+    slots: {
+      decimal: {
+        expectedClassName: classes.decimal,
+        testWithComponent: CustomDecimal,
+        testWithElement: CustomDecimal,
+      },
+    },
+    only: [
+      'slotsProp',
+      'slotPropsProp',
+      'slotPropsCallback',
+      'slotPropsCallbackWithPropsAsOwnerState',
+    ],
   }));
 
   it('should render', () => {
@@ -39,9 +87,7 @@ describe('<Rating />', () => {
     stub(container.firstChild, 'getBoundingClientRect').callsFake(() => ({
       left: 0,
       right: 100,
-    }));
-    stub(container.firstChild.firstChild, 'getBoundingClientRect').callsFake(() => ({
-      width: 20,
+      width: 100,
     }));
     fireEvent.mouseMove(container.firstChild, {
       clientX: 19,
@@ -51,6 +97,52 @@ describe('<Rating />', () => {
       clientX: 21,
     });
     expect(container.querySelectorAll(`.${classes.iconHover}`).length).to.equal(2);
+  });
+
+  it('should handle mouse hover correctly for icons with spacing', () => {
+    const { container } = render(
+      <Rating
+        sx={{
+          [`.${classes.decimal}`]: { marginRight: 2 },
+        }}
+        precision={0.5}
+      />,
+    );
+    stub(container.firstChild, 'getBoundingClientRect').callsFake(() => ({
+      left: 0,
+      right: 200,
+      width: 200,
+    }));
+
+    fireEvent.mouseMove(container.firstChild, {
+      clientX: 19,
+    });
+    // half star highlighted
+    expect(container.querySelectorAll(`.${classes.iconHover}`).length).to.equal(1);
+
+    fireEvent.mouseMove(container.firstChild, {
+      clientX: 21,
+    });
+    // one full star highlighted
+    expect(container.querySelectorAll(`.${classes.iconHover}`).length).to.equal(2);
+
+    fireEvent.mouseMove(container.firstChild, {
+      clientX: 39,
+    });
+    // Still one star remains highlighted as the total item width (40px) has not been reached yet, considering 24px for the icon width and 16px for margin-right.
+    expect(container.querySelectorAll(`.${classes.iconHover}`).length).to.equal(2);
+
+    fireEvent.mouseMove(container.firstChild, {
+      clientX: 41,
+    });
+    // one and half star highlighted
+    expect(container.querySelectorAll(`.${classes.iconHover}`).length).to.equal(3);
+
+    fireEvent.mouseMove(container.firstChild, {
+      clientX: 60,
+    });
+    // two full stars highlighted
+    expect(container.querySelectorAll(`.${classes.iconHover}`).length).to.equal(4);
   });
 
   it('should clear the rating', () => {
@@ -119,6 +211,41 @@ describe('<Rating />', () => {
     expect(container.querySelector('.customized')).to.have.tagName('label');
   });
 
+  it('should apply labelEmptyValueActive styles from theme', function test() {
+    if (/jsdom/.test(window.navigator.userAgent)) {
+      this.skip();
+    }
+
+    const theme = createTheme({
+      components: {
+        MuiRating: {
+          styleOverrides: {
+            labelEmptyValueActive: {
+              height: '120px',
+            },
+          },
+        },
+      },
+    });
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <Rating value={null} />
+      </ThemeProvider>,
+    );
+
+    act(() => {
+      const noValueRadio = screen.getAllByRole('radio').find((radio) => {
+        return radio.checked;
+      });
+
+      noValueRadio.focus();
+    });
+
+    expect(container.querySelector(`.${classes.labelEmptyValueActive}`)).toHaveComputedStyle({
+      height: '120px',
+    });
+  });
+
   // Internal test that only applies if Rating is implemented using `input[type"radio"]`
   // It ensures that keyboard navigation for Arrow and TAB keys is handled by the browser
   it('should ensure a `name`', () => {
@@ -129,6 +256,26 @@ describe('<Rating />', () => {
     expect(arbitraryRadio.name).not.to.equal('');
     // all input[type="radio"] have the same name
     expect(new Set(radios.map((radio) => radio.name))).to.have.length(1);
+  });
+
+  it('should use `name` as prefix of input element ids', () => {
+    render(<Rating name="rating-test" />);
+
+    const radios = document.querySelectorAll('input[type="radio"]');
+
+    for (let i = 0; i < radios.length; i += 1) {
+      expect(radios[i].getAttribute('id')).to.match(/^rating-test-/);
+    }
+  });
+
+  it('should be able to replace the icon', () => {
+    function Icon(props) {
+      return <i data-testid="custom" {...props} />;
+    }
+    render(<Rating name="rating-test" max={1} slotProps={{ icon: { component: Icon } }} />);
+
+    expect(screen.getByTestId('custom')).to.have.property('tagName', 'I');
+    expect(screen.getByTestId('custom')).to.have.class(classes.icon);
   });
 
   describe('prop: readOnly', () => {
@@ -143,13 +290,25 @@ describe('<Rating />', () => {
 
       expect(screen.getByRole('img')).toHaveAccessibleName('Stars: 2');
     });
+
+    it('should have a correct label when no value is set', () => {
+      render(<Rating readOnly />);
+
+      expect(screen.getByRole('img')).toHaveAccessibleName('0 Stars');
+    });
+
+    it('should have readOnly class applied', () => {
+      render(<Rating readOnly value={2} />);
+
+      expect(screen.getByRole('img')).to.have.class(classes.readOnly);
+    });
   });
 
   describe('<form> integration', () => {
     before(function beforeHook() {
       if (/jsdom/.test(window.navigator.userAgent)) {
         // JSDOM has issues with form validation for certain elements.
-        // We could adress them individually but that doesn't add much value if we already have a working environment.
+        // We could address them individually but that doesn't add much value if we already have a working environment.
         this.skip();
       }
     });

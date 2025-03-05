@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { styled } from '@mui/material/styles';
 import Typography from '@material-ui/core/Typography';
 import Container from 'modules/components/Container';
@@ -62,20 +62,20 @@ function SellHero() {
 
 
   return (
-    <Root className={classes.root}>
+    (<Root className={classes.root}>
       <Container className={classes.container}>
         <Typography variant="h1" align="center" color="textPrimary" className={classes.title}>
           Sell themes
         </Typography>
         <Typography component="h2" align="center" variant="h3" color="textSecondary">
-          {'Build your React themes business on the official MUI store.'}
+          {'Build your React themes business on the official MUI Store.'}
         </Typography>
         <div className={classes.actions}>
           <Button
             variant="contained"
             component={Link}
             naked
-            to="https://material-ui.zendesk.com/hc/en-us/articles/360008775380-How-do-I-apply-to-be-a-contributor-"
+            to="https://support.mui.com/hc/en-us/articles/360008775380-How-do-I-apply-to-be-a-contributor-"
             target="_blank"
             rel="noopener"
             className={classes.apply}
@@ -87,7 +87,7 @@ function SellHero() {
           </Button>
         </div>
       </Container>
-    </Root>
+    </Root>)
   );
 }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { styled } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
@@ -180,7 +180,7 @@ class AppAppBar extends React.Component {
     const { menuOpen } = this.state;
 
     return (
-      <StyledAppBar essential={essential} position={position}>
+      (<StyledAppBar essential={essential} position={position}>
         <div className={clsx(classes.wrap, { [classes.wrapOpened]: menuOpen })}>
           <Link to="/" aria-label="Back to homepage" color="inherit">
             <Logo color={menuOpen ? 'inherit' : 'textPrimary'} />
@@ -202,7 +202,7 @@ class AppAppBar extends React.Component {
               <Typography
                 className={classes.item}
                 component={Link}
-                to="https://material-ui.zendesk.com/hc/en-us"
+                to="https://support.mui.com/hc/en-us"
                 target="_blank"
               >
                 {'Help'}
@@ -237,7 +237,7 @@ class AppAppBar extends React.Component {
             </div>
           )}
         </div>
-      </StyledAppBar>
+      </StyledAppBar>)
     );
   }
 }

@@ -1,8 +1,11 @@
+'use client';
 import * as React from 'react';
 import {
   DEFAULT_MODE_STORAGE_KEY,
   DEFAULT_COLOR_SCHEME_STORAGE_KEY,
-} from './getInitColorSchemeScript';
+} from '../InitColorSchemeScript/InitColorSchemeScript';
+import type { StorageManager } from './localStorageManager';
+import localStorageManager from './localStorageManager';
 
 export type Mode = 'light' | 'dark' | 'system';
 export type SystemMode = Exclude<Mode, 'system'>;
@@ -12,11 +15,11 @@ export interface State<SupportedColorScheme extends string> {
    * User selected mode.
    * Note: on the server, mode is always undefined
    */
-  mode: Mode | undefined;
+  mode: 'light' | 'dark' | 'system' | undefined;
   /**
    * Only valid if `mode: 'system'`, either 'light' | 'dark'.
    */
-  systemMode: SystemMode | undefined;
+  systemMode: 'light' | 'dark' | undefined;
   /**
    * The color scheme for the light mode.
    */
@@ -52,8 +55,14 @@ export type Result<SupportedColorScheme extends string> = State<SupportedColorSc
   ) => void;
 };
 
+function noop() {}
+
 export function getSystemMode(mode: undefined | string): SystemMode | undefined {
-  if (typeof window !== 'undefined' && mode === 'system') {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    mode === 'system'
+  ) {
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     if (mql.matches) {
       return 'dark';
@@ -90,27 +99,21 @@ export function getColorScheme<SupportedColorScheme extends string>(
   });
 }
 
-function resolveValue(key: string, defaultValue?: string) {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-  let value;
-  try {
-    value = localStorage.getItem(key) || undefined;
-  } catch (e) {
-    // Unsupported
-  }
-  return value || defaultValue;
-}
-
-export default function useCurrentColorScheme<SupportedColorScheme extends string>(options: {
+interface UseCurrentColoSchemeOptions<SupportedColorScheme extends string> {
   defaultLightColorScheme: SupportedColorScheme;
   defaultDarkColorScheme: SupportedColorScheme;
   supportedColorSchemes: Array<SupportedColorScheme>;
   defaultMode?: Mode;
   modeStorageKey?: string;
   colorSchemeStorageKey?: string;
-}): Result<SupportedColorScheme> {
+  storageWindow?: Window | null;
+  storageManager?: StorageManager | null;
+  noSsr?: boolean;
+}
+
+export default function useCurrentColorScheme<SupportedColorScheme extends string>(
+  options: UseCurrentColoSchemeOptions<SupportedColorScheme>,
+): Result<SupportedColorScheme> {
   const {
     defaultMode = 'light',
     defaultLightColorScheme,
@@ -118,29 +121,53 @@ export default function useCurrentColorScheme<SupportedColorScheme extends strin
     supportedColorSchemes = [],
     modeStorageKey = DEFAULT_MODE_STORAGE_KEY,
     colorSchemeStorageKey = DEFAULT_COLOR_SCHEME_STORAGE_KEY,
+    storageWindow = typeof window === 'undefined' ? undefined : window,
+    storageManager = localStorageManager,
+    noSsr = false,
   } = options;
 
   const joinedColorSchemes = supportedColorSchemes.join(',');
+  const isMultiSchemes = supportedColorSchemes.length > 1;
+  const modeStorage = React.useMemo(
+    () => storageManager?.({ key: modeStorageKey, storageWindow }),
+    [storageManager, modeStorageKey, storageWindow],
+  );
+  const lightStorage = React.useMemo(
+    () => storageManager?.({ key: `${colorSchemeStorageKey}-light`, storageWindow }),
+    [storageManager, colorSchemeStorageKey, storageWindow],
+  );
+  const darkStorage = React.useMemo(
+    () => storageManager?.({ key: `${colorSchemeStorageKey}-dark`, storageWindow }),
+    [storageManager, colorSchemeStorageKey, storageWindow],
+  );
 
   const [state, setState] = React.useState(() => {
-    const initialMode = resolveValue(modeStorageKey, defaultMode);
+    const initialMode = modeStorage?.get(defaultMode) || defaultMode;
+    const lightColorScheme = lightStorage?.get(defaultLightColorScheme) || defaultLightColorScheme;
+    const darkColorScheme = darkStorage?.get(defaultDarkColorScheme) || defaultDarkColorScheme;
     return {
       mode: initialMode,
       systemMode: getSystemMode(initialMode),
-      lightColorScheme: resolveValue(`${colorSchemeStorageKey}-light`) || defaultLightColorScheme,
-      darkColorScheme: resolveValue(`${colorSchemeStorageKey}-dark`) || defaultDarkColorScheme,
+      lightColorScheme,
+      darkColorScheme,
     } as State<SupportedColorScheme>;
   });
+  const [isClient, setIsClient] = React.useState(noSsr || !isMultiSchemes);
+  React.useEffect(() => {
+    setIsClient(true); // to rerender the component after hydration
+  }, []);
 
   const colorScheme = getColorScheme(state);
 
   const setMode: Result<SupportedColorScheme>['setMode'] = React.useCallback(
     (mode) => {
       setState((currentState) => {
-        const newMode = !mode ? defaultMode : mode;
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem(modeStorageKey, newMode);
+        if (mode === currentState.mode) {
+          // do nothing if mode does not change
+          return currentState;
         }
+        const newMode = mode ?? defaultMode;
+        modeStorage?.set(newMode);
         return {
           ...currentState,
           mode: newMode,
@@ -148,70 +175,89 @@ export default function useCurrentColorScheme<SupportedColorScheme extends strin
         };
       });
     },
-    [modeStorageKey, defaultMode],
+    [modeStorage, defaultMode],
   );
 
   const setColorScheme: Result<SupportedColorScheme>['setColorScheme'] = React.useCallback(
     (value) => {
-      if (!value || typeof value === 'string') {
-        if (value && !supportedColorSchemes.includes(value)) {
+      if (!value) {
+        setState((currentState) => {
+          lightStorage?.set(defaultLightColorScheme);
+          darkStorage?.set(defaultDarkColorScheme);
+          return {
+            ...currentState,
+            lightColorScheme: defaultLightColorScheme,
+            darkColorScheme: defaultDarkColorScheme,
+          };
+        });
+      } else if (typeof value === 'string') {
+        if (value && !joinedColorSchemes.includes(value)) {
           console.error(`\`${value}\` does not exist in \`theme.colorSchemes\`.`);
         } else {
           setState((currentState) => {
             const newState = { ...currentState };
-            if (!value) {
-              // reset to default color scheme
-              newState.lightColorScheme = defaultLightColorScheme;
-              newState.darkColorScheme = defaultDarkColorScheme;
-              return newState;
-            }
             processState(currentState, (mode) => {
-              localStorage.setItem(`${colorSchemeStorageKey}-${mode}`, value);
               if (mode === 'light') {
+                lightStorage?.set(value);
                 newState.lightColorScheme = value;
               }
               if (mode === 'dark') {
+                darkStorage?.set(value);
                 newState.darkColorScheme = value;
               }
             });
             return newState;
           });
         }
-      } else if (
-        (value.light && !supportedColorSchemes.includes(value.light)) ||
-        (value.dark && !supportedColorSchemes.includes(value.dark))
-      ) {
-        console.error(`\`${value}\` does not exist in \`theme.colorSchemes\`.`);
       } else {
         setState((currentState) => {
           const newState = { ...currentState };
-          if (value.light || value.light === null) {
-            newState.lightColorScheme =
-              value.light === null ? defaultLightColorScheme : value.light;
+          const newLightColorScheme = value.light === null ? defaultLightColorScheme : value.light;
+          const newDarkColorScheme = value.dark === null ? defaultDarkColorScheme : value.dark;
+
+          if (newLightColorScheme) {
+            if (!joinedColorSchemes.includes(newLightColorScheme)) {
+              console.error(`\`${newLightColorScheme}\` does not exist in \`theme.colorSchemes\`.`);
+            } else {
+              newState.lightColorScheme = newLightColorScheme;
+              lightStorage?.set(newLightColorScheme);
+            }
           }
-          if (value.dark || value.dark === null) {
-            newState.darkColorScheme = value.dark === null ? defaultDarkColorScheme : value.dark;
+
+          if (newDarkColorScheme) {
+            if (!joinedColorSchemes.includes(newDarkColorScheme)) {
+              console.error(`\`${newDarkColorScheme}\` does not exist in \`theme.colorSchemes\`.`);
+            } else {
+              newState.darkColorScheme = newDarkColorScheme;
+              darkStorage?.set(newDarkColorScheme);
+            }
           }
+
           return newState;
         });
-        if (value.light) {
-          localStorage.setItem(`${colorSchemeStorageKey}-light`, value.light);
-        }
-        if (value.dark) {
-          localStorage.setItem(`${colorSchemeStorageKey}-dark`, value.dark);
-        }
       }
     },
-    [colorSchemeStorageKey, supportedColorSchemes, defaultLightColorScheme, defaultDarkColorScheme],
+    [
+      joinedColorSchemes,
+      lightStorage,
+      darkStorage,
+      defaultLightColorScheme,
+      defaultDarkColorScheme,
+    ],
   );
 
   const handleMediaQuery = React.useCallback(
-    (e?) => {
+    (event?: MediaQueryListEvent) => {
       if (state.mode === 'system') {
-        setState((currentState) => ({
-          ...currentState,
-          systemMode: e.matches ? 'dark' : 'light',
-        }));
+        setState((currentState) => {
+          const systemMode = event?.matches ? 'dark' : 'light';
+
+          // Early exit, nothing changed.
+          if (currentState.systemMode === systemMode) {
+            return currentState;
+          }
+          return { ...currentState, systemMode };
+        });
       }
     },
     [state.mode],
@@ -222,6 +268,9 @@ export default function useCurrentColorScheme<SupportedColorScheme extends strin
   mediaListener.current = handleMediaQuery;
 
   React.useEffect(() => {
+    if (typeof window.matchMedia !== 'function' || !isMultiSchemes) {
+      return undefined;
+    }
     const handler = (...args: any) => mediaListener.current(...args);
 
     // Always listen to System preference
@@ -230,60 +279,56 @@ export default function useCurrentColorScheme<SupportedColorScheme extends strin
     // Intentionally use deprecated listener methods to support iOS & old browsers
     media.addListener(handler);
     handler(media);
-
-    return () => media.removeListener(handler);
-  }, []);
-
-  // Save mode, lightColorScheme & darkColorScheme to localStorage
-  React.useEffect(() => {
-    if (state.mode) {
-      localStorage.setItem(modeStorageKey, state.mode);
-    }
-    processState(state, (mode) => {
-      if (mode === 'light') {
-        localStorage.setItem(`${colorSchemeStorageKey}-light`, state.lightColorScheme);
-      }
-      if (mode === 'dark') {
-        localStorage.setItem(`${colorSchemeStorageKey}-dark`, state.darkColorScheme);
-      }
-    });
-  }, [state, colorSchemeStorageKey, modeStorageKey]);
+    return () => {
+      media.removeListener(handler);
+    };
+  }, [isMultiSchemes]);
 
   // Handle when localStorage has changed
   React.useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      const value = event.newValue;
-      if (
-        typeof event.key === 'string' &&
-        event.key.startsWith(colorSchemeStorageKey) &&
-        (!value || joinedColorSchemes.match(value))
-      ) {
-        // If the key is deleted, value will be null then reset color scheme to the default one.
-        if (event.key.endsWith('light')) {
-          setColorScheme({ light: value as SupportedColorScheme | null });
-        }
-        if (event.key.endsWith('dark')) {
-          setColorScheme({ dark: value as SupportedColorScheme | null });
-        }
-      }
-      if (event.key === modeStorageKey && (!value || ['light', 'dark', 'system'].includes(value))) {
-        setMode((value as Mode) || defaultMode);
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    if (isMultiSchemes) {
+      const unsubscribeMode =
+        modeStorage?.subscribe((value: Mode) => {
+          if (!value || ['light', 'dark', 'system'].includes(value)) {
+            setMode((value as Mode) || defaultMode);
+          }
+        }) || noop;
+      const unsubscribeLight =
+        lightStorage?.subscribe((value: SupportedColorScheme) => {
+          if (!value || joinedColorSchemes.match(value)) {
+            setColorScheme({ light: value as SupportedColorScheme | null });
+          }
+        }) || noop;
+      const unsubscribeDark =
+        darkStorage?.subscribe((value: SupportedColorScheme) => {
+          if (!value || joinedColorSchemes.match(value)) {
+            setColorScheme({ dark: value as SupportedColorScheme | null });
+          }
+        }) || noop;
+      return () => {
+        unsubscribeMode();
+        unsubscribeLight();
+        unsubscribeDark();
+      };
+    }
+    return undefined;
   }, [
     setColorScheme,
     setMode,
-    modeStorageKey,
-    colorSchemeStorageKey,
     joinedColorSchemes,
     defaultMode,
+    storageWindow,
+    isMultiSchemes,
+    modeStorage,
+    lightStorage,
+    darkStorage,
   ]);
 
   return {
     ...state,
-    colorScheme,
+    mode: isClient ? state.mode : undefined,
+    systemMode: isClient ? state.systemMode : undefined,
+    colorScheme: isClient ? colorScheme : undefined,
     setMode,
     setColorScheme,
   };

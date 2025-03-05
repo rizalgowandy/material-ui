@@ -5,7 +5,9 @@ interface Theme {
   color: string;
 }
 
-const Text = (props: { sx?: SxProps<Theme> }) => null;
+function Text(props: { sx?: SxProps<Theme> }) {
+  return null;
+}
 
 // object
 <Text sx={{ color: '#121212' }} />;
@@ -15,3 +17,9 @@ const Text = (props: { sx?: SxProps<Theme> }) => null;
 
 // array
 <Text sx={[(theme) => ({ color: theme.color }), { m: 2 }]} />;
+
+// null
+<Text sx={{ m: null, transform: null, typography: undefined }} />;
+
+// array contains boolean
+<Text sx={[false && { p: 2 }, { m: 2 }]} />;
